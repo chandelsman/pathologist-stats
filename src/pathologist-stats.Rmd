@@ -21,9 +21,38 @@ library(gt)
 
 ![](sp-logo.png){width=25%}
 
-# Pathologist Case Statistics: Jan 2019 -- Sep 2020
+# Cases and Blocks Signed-out by Pathologist: <br>Jan 2019 -- Sep 2020
+
+<br>
 
 ```{r import-clean-data, echo=FALSE, message=FALSE}
+#import and clean data for all cases
+cases <- list.files(path = "../data/", pattern = "*-cases.xls", full.names = TRUE)
+
+cases_raw <- sapply(cases, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id) 
+
+cases_clean <- 
+  cases_raw %>% 
+  pivot_longer(
+    !`Pathologist`, 
+    names_to = "ddate",
+    values_to = "n"
+  ) %>% 
+  mutate(
+    ddate = mdy(ddate),
+    yr = year(ddate),
+    mth = month(ddate, label = TRUE, abbr = TRUE)
+  ) %>% 
+  filter(ddate < "2020-10-01") %>% 
+  group_by(yr, mth, Pathologist) %>% 
+  summarize(
+    Cases = as.numeric(sum(n, na.rm = TRUE))
+  ) %>% 
+  ungroup()
+
+# AP case and block data
 files <- list.files(path = "../data/", pattern = "2019-0.*.xls", full.names = TRUE)
 
 ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
@@ -50,6 +79,15 @@ ap_clean <-
 ```
 
 ```{r pivot-data, echo=FALSE, message=FALSE}
+# Pivot data to wide format for tabulation
+cases_wide <-  
+  cases_clean %>% 
+  filter(Cases > 0) %>% 
+  pivot_wider(
+    names_from = mth,
+    values_from = Cases
+  )
+
 ap_cases <- 
   ap_clean %>% 
   select(-Blocks) %>% 
@@ -70,46 +108,159 @@ fns_labels <-
   )
 ```
 
-```{r AP-cases, echo=FALSE, message=FALSE}
-# Monthly case counts by pathologist
-ap_cases %>% 
-  rename(rowname = `Primary Pathologist`) %>% 
+## 2019 All Cases
+
+```{r 2019-cases, echo=FALSE, message=FALSE}
+# 2019 Monthly case counts by pathologist
+cases_wide %>% 
+  filter(yr == 2019) %>% 
+  select(-yr) %>% 
+  rename(rowname = Pathologist) %>% 
   gt(groupname_col = "yr") %>% 
-  tab_header(
-    title = md("**Monthly AP Cases by Pathologist**")
-  ) %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
-    groups = TRUE,
+    groups = NULL,
     columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
-  tab_options(column_labels.font.weight = "bold")
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
 ```
-
-<br>
 
 <p style="page-break-before: always;"></p>
 
 <br>
 
-```{r AP-blocks, echo=FALSE, message=FALSE}
-# monthly block count by pathologist
-ap_blocks %>% 
-  rename(rowname = `Primary Pathologist`) %>% 
+## 2020 (Q1 -- Q3) All Cases
+
+```{r 2020-cases, echo=FALSE, message=FALSE}
+# 2020 Monthly case counts by pathologist
+cases_wide %>% 
+  filter(yr == 2020) %>% 
+  select(-yr) %>% 
+  rename(rowname = Pathologist) %>% 
   gt(groupname_col = "yr") %>% 
-  tab_header(
-    title = md("**Monthly Blocks for AP Cases by Pathologist**")
-  ) %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
-    groups = TRUE,
+    groups = NULL,
     columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
-  tab_options(column_labels.font.weight = "bold")
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2019 Anatomic Pathology Cases
+
+```{r AP2019-cases, echo=FALSE, message=FALSE}
+# 2019 Monthly case counts by pathologist
+ap_cases %>% 
+  filter(yr == 2019) %>% 
+  select(-yr) %>% 
+  rename(rowname = `Primary Pathologist`) %>% 
+  gt(groupname_col = "yr") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2020 (Q1 -- Q3) Anatomic Pathology Cases
+```{r AP2020-cases, echo=FALSE, message=FALSE}
+# 2020 Monthly case counts by pathologist
+ap_cases %>% 
+  filter(yr == 2020) %>% 
+  select(-yr) %>% 
+  rename(rowname = `Primary Pathologist`) %>% 
+  gt(groupname_col = "yr") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2019 Anatomic Pathology Blocks
+
+```{r AP2019-blocks, echo=FALSE, message=FALSE}
+# monthly block count by pathologist
+ap_blocks %>% 
+  filter(yr == 2019) %>% 
+  select(-yr) %>% 
+  rename(rowname = `Primary Pathologist`) %>% 
+  gt(groupname_col = "yr") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2020 (Q1 -- Q3) Anatomic Pathology Blocks
+
+```{r AP2020-blocks, echo=FALSE, message=FALSE}
+# monthly block count by pathologist
+ap_blocks %>% 
+  filter(yr == 2020) %>% 
+  select(-yr) %>% 
+  rename(rowname = `Primary Pathologist`) %>% 
+  gt(groupname_col = "yr") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11)
+  )
 ```
