@@ -1,15 +1,32 @@
-# Summarize cases and blocks completed by pathologists
+---
+title: ''
+output: 
+  html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 
 # load libraries
 library(tidyverse)
 library(lubridate)
+library(ggplot2)
 library(readxl)
 library(gt)
+```
 
-# import raw data for all cases
-files <- list.files(path = "data/", pattern = "2019-0.*.xls", full.names = T)
+<div align="center"> 
 
-ap_raw <- sapply(files, read_excel, simplify=FALSE) %>% 
+![](sp-logo.png){width=25%}
+
+# Pathologist Case Statistics: Jan 2019 -- Sep 2020
+
+```{r import-clean-data, echo=FALSE, message=FALSE}
+files <- list.files(path = "../data/", pattern = "2019-0.*.xls", full.names = TRUE)
+
+ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
   bind_rows(.id = "id") %>% 
   select(-id) 
 
@@ -30,7 +47,9 @@ ap_clean <-
     Blocks = as.numeric(sum(Blocks))
   ) %>% 
   ungroup()
+```
 
+```{r pivot-data, echo=FALSE, message=FALSE}
 ap_cases <- 
   ap_clean %>% 
   select(-Blocks) %>% 
@@ -40,35 +59,24 @@ ap_blocks <-
   ap_clean %>% 
   select(-Cases) %>% 
   pivot_wider(names_from = mth, values_from = Blocks)
+```
 
+```{r summary-fns, echo=FALSE, message=FALSE}
 # define summary row functions
 fns_labels <- 
   list(
     Avg = ~mean(., na.rm = TRUE),
     Total = ~sum(., na.rm = TRUE)
   )
+```
 
-ap_blocks %>% 
-  rename(rowname = `Primary Pathologist`) %>% 
-  gt(groupname_col = "yr") %>% 
-  tab_header(
-    title = md("Monthly Blocks for AP Cases by Pathologist")
-  ) %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = TRUE,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  )
-
+```{r AP-cases, echo=FALSE, message=FALSE}
 # Monthly case counts by pathologist
 ap_cases %>% 
   rename(rowname = `Primary Pathologist`) %>% 
   gt(groupname_col = "yr") %>% 
   tab_header(
-    title = md("Monthly AP Cases by Pathologist")
+    title = md("**Monthly AP Cases by Pathologist**")
   ) %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
@@ -77,4 +85,31 @@ ap_cases %>%
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
-  )
+  ) %>% 
+  tab_options(column_labels.font.weight = "bold")
+```
+
+<br>
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+```{r AP-blocks, echo=FALSE, message=FALSE}
+# monthly block count by pathologist
+ap_blocks %>% 
+  rename(rowname = `Primary Pathologist`) %>% 
+  gt(groupname_col = "yr") %>% 
+  tab_header(
+    title = md("**Monthly Blocks for AP Cases by Pathologist**")
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = TRUE,
+    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_options(column_labels.font.weight = "bold")
+```
