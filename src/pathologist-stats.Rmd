@@ -45,7 +45,9 @@ cases_clean <-
     yr = year(ddate),
     mth = month(ddate, label = TRUE, abbr = TRUE)
   ) %>% 
-  filter(ddate < "2020-10-01") %>% 
+  filter(ddate < "2020-10-01",
+         !Pathologist %in% c("Brooke Caufield, MD", "Joseph Lillis, MD", 
+           "Laurel Stearns, DO")) %>% 
   group_by(yr, mth, Pathologist) %>% 
   summarize(
     Cases = as.numeric(sum(n, na.rm = TRUE))
@@ -68,7 +70,7 @@ ap_clean <-
   ) %>% 
   filter(
     `Create Date` < "2020-10-01",
-    status != "Deleted"
+    status != "Deleted", 
   ) %>% 
   group_by(yr, mth, `Primary Pathologist`) %>% 
   summarize(
@@ -86,24 +88,39 @@ cases_wide <-
   pivot_wider(
     names_from = mth,
     values_from = Cases
+  ) %>% 
+  rowwise() %>% 
+  mutate(
+    Annual = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
   )
 
 ap_cases <- 
   ap_clean %>% 
   select(-Blocks) %>% 
-  pivot_wider(names_from = mth, values_from = Cases)
+  pivot_wider(names_from = mth, values_from = Cases) %>% 
+  rowwise() %>% 
+  mutate(
+    Annual = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+  )
 
 ap_blocks <- 
   ap_clean %>% 
   select(-Cases) %>% 
-  pivot_wider(names_from = mth, values_from = Blocks)
+  pivot_wider(names_from = mth, values_from = Blocks) %>% 
+  rowwise() %>% 
+  mutate(
+    Annual = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+  )
 ```
 
 ```{r summary-fns, echo=FALSE, message=FALSE}
 # define summary row functions
 fns_labels <- 
   list(
-    Avg = ~mean(., na.rm = TRUE),
+    Median = ~median(., na.rm = TRUE),
     Total = ~sum(., na.rm = TRUE)
   )
 ```
@@ -120,14 +137,16 @@ cases_wide %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
 
@@ -147,14 +166,16 @@ cases_wide %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
 
@@ -174,14 +195,16 @@ ap_cases %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
 
@@ -207,7 +230,8 @@ ap_cases %>%
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
 
@@ -234,7 +258,8 @@ ap_blocks %>%
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
 
@@ -261,6 +286,7 @@ ap_blocks %>%
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
-    table.font.size = px(11)
+    table.font.size = px(11), 
+    table.width = pct(85)
   )
 ```
