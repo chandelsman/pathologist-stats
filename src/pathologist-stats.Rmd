@@ -14,6 +14,7 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(readxl)
+library(here)
 library(gt)
 ```
 
@@ -27,12 +28,72 @@ library(gt)
 
 ```{r import-clean-data, echo=FALSE, message=FALSE}
 #import and clean data for all cases
-cases <- list.files(path = "../data/", pattern = "*-cases.xls", full.names = TRUE)
+# All signed out cases raw data -----
+cases <- list.files(path = here("data"),
+                    pattern = "^(\\d{4})(-cases)\\.xls",
+                    full.names = TRUE)
 
 cases_raw <- sapply(cases, readxl::read_excel, simplify = FALSE) %>% 
   bind_rows(.id = "id") %>% 
   select(-id) 
 
+# AP cases and blocks raw data -----
+files <- list.files(path = here("data"),
+                    pattern = "^(\\d{4})(-\\d.+)\\.xls",
+                    full.names = TRUE)
+
+ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id) 
+
+# Intraoperative consultations raw data -----
+iop <- list.files(path = here("data"),
+                  pattern = "(\\d+)(-iop)(\\.xls)",
+                  full.names = TRUE)
+
+iop_raw <- sapply(iop, readxl::read_excel, simplify = FALSE) %>%
+  bind_rows(.id = "id") %>%
+  select(-id)
+
+# Internal consultations raw data -----
+iconsult <- list.files(path = here("data"),
+                       pattern = "(\\d+)(-marrow)(\\.xls)",
+                       full.names = TRUE)
+
+iconsult_raw <- sapply(iconsult, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id)
+
+# Bone marrow cases raw data -----
+marrow <- list.files(path = here("data"), 
+                     pattern = "(\\d+)(-marrow)(\\.xls)",
+                     full.names = TRUE)
+marrow_raw <- sapply(marrow, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id)
+
+# Flow cytometry cases raw data -----
+flow <- list.files(path = here("data"),
+                   pattern = "(\\d+)(-flow)(\\.xls)",
+                   full.names = TRUE)
+
+flow_raw <- sapply(flow, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id) %>% 
+  filter(!str_detect(Pathologist, c("-|Total")))
+
+# Peripheral blood reviews raw data -----
+pblood <- list.files(path = here("data"),
+                               pattern = "(\\d+)(-peripheral-blood)(\\.xls)",
+                               full.names = TRUE)
+pblood_raw <- sapply(pblood, readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows(.id = "id") %>% 
+  select(-id) %>% 
+  filter(!str_detect(Pathologist, "-|Total"))
+```
+
+```{r clean-data, echo=FALSE, message=FALSE}
+# Clean all cases data -----
 cases_clean <- 
   cases_raw %>% 
   pivot_longer(
@@ -54,13 +115,7 @@ cases_clean <-
   ) %>% 
   ungroup()
 
-# AP case and block data
-files <- list.files(path = "../data/", pattern = "2019-0.*.xls", full.names = TRUE)
-
-ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id) 
-
+# Clean AP cases and blocks data -----
 ap_clean <- 
   ap_raw %>% 
   mutate(
@@ -91,7 +146,7 @@ cases_wide <-
   ) %>% 
   rowwise() %>% 
   mutate(
-    Annual = sum(
+    Total = sum(
       Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
   )
 
@@ -101,7 +156,7 @@ ap_cases <-
   pivot_wider(names_from = mth, values_from = Cases) %>% 
   rowwise() %>% 
   mutate(
-    Annual = sum(
+    Total = sum(
       Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
   )
 
@@ -111,7 +166,7 @@ ap_blocks <-
   pivot_wider(names_from = mth, values_from = Blocks) %>% 
   rowwise() %>% 
   mutate(
-    Annual = sum(
+    Total = sum(
       Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
   )
 ```
@@ -121,7 +176,7 @@ ap_blocks <-
 fns_labels <- 
   list(
     Median = ~median(., na.rm = TRUE),
-    Total = ~sum(., na.rm = TRUE)
+    `Grand Total` = ~sum(., na.rm = TRUE)
   )
 ```
 
@@ -133,15 +188,29 @@ cases_wide %>%
   filter(yr == 2019) %>% 
   select(-yr) %>% 
   rename(rowname = Pathologist) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -162,15 +231,29 @@ cases_wide %>%
   filter(yr == 2020) %>% 
   select(-yr) %>% 
   rename(rowname = Pathologist) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -191,15 +274,29 @@ ap_cases %>%
   filter(yr == 2019) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Annual),
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -219,14 +316,29 @@ ap_cases %>%
   filter(yr == 2020) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -247,14 +359,29 @@ ap_blocks %>%
   filter(yr == 2019) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -275,14 +402,29 @@ ap_blocks %>%
   filter(yr == 2020) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
+  arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
