@@ -13,7 +13,6 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-library(readxl)
 library(here)
 library(gt)
 ```
@@ -176,7 +175,7 @@ ap_blocks <-
 fns_labels <- 
   list(
     Median = ~median(., na.rm = TRUE),
-    `Grand Total` = ~sum(., na.rm = TRUE)
+    `Total` = ~sum(., na.rm = TRUE)
   )
 ```
 
