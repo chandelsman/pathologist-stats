@@ -201,6 +201,7 @@ cases_wide %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -209,6 +210,7 @@ cases_wide %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -244,6 +246,7 @@ cases_wide %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -252,6 +255,7 @@ cases_wide %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -287,6 +291,7 @@ ap_cases %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -295,6 +300,7 @@ ap_cases %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -329,6 +335,7 @@ ap_cases %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -337,6 +344,7 @@ ap_cases %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -372,6 +380,7 @@ ap_blocks %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -380,6 +389,7 @@ ap_blocks %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -415,6 +425,7 @@ ap_blocks %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
+      columns = vars(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -423,6 +434,7 @@ ap_blocks %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
+      columns = vars(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -457,15 +469,76 @@ iop_raw %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`,Total),
+    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
   ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(`FNA Adequacy`),
+  #     rows = `FNA Adequacy` >= median(`FNA Adequacy`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(`FNA Adequacy`),
+  #     rows = `FNA Adequacy` < median(`FNA Adequacy`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(Frozen),
+  #     rows = Frozen >= median(Frozen, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(Frozen),
+  #     rows = Frozen < median(Frozen, na.rm = TRUE)) 
+  # ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(Gross),
+  #     rows = Gross >= median(Gross, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(Gross),
+  #     rows = Gross < median(Gross, na.rm = TRUE))
+  # ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(`Touch Prep`),
+  #     rows = `Touch Prep` >= median(`Touch Prep`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(`Touch Prep`),
+  #     rows = `Touch Prep` < median(`Touch Prep`, na.rm = TRUE))
+  # ) %>% 
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      rows = Total >= median(Total))
+      columns = vars(Total),
+      rows = Total >= median(Total, na.rm = TRUE))
   ) %>%
   tab_style(
     style = list(
@@ -473,7 +546,8 @@ iop_raw %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      rows = median(Total) > Total)
+      columns = vars(Total),
+      rows = Total < median(Total, na.rm = TRUE))
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
@@ -486,11 +560,54 @@ iop_raw %>%
 
 <br>
 
-## 2020 Q3 Internal QC
+## 2020 Q3 Internal Quality Control
 
-### Internal Consulations Perfomred
+### Internal Consulations Performed
 
 ```{r internal-qc, echo=FALSE, message=FALSE}
+# Multiple pathologists can consult on one case. 
+# Consults performed is the sum of unique combinations of accession number 
+# and Consulting Pathologist
 
+iconsult_raw %>% 
+  select(Accession, `Consulting Pathologist`) %>% 
+  rename(Pathologist = `Consulting Pathologist`) %>% 
+  group_by(Pathologist, Accession) %>% 
+  distinct() %>% 
+  group_by(Pathologist) %>% 
+  summarize(n = sum(n())) %>% 
+  arrange(desc(n)) %>% 
+  ungroup() %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+tab_style(
+  style = cell_fill(color = "lightgreen"),
+  locations = cells_body(
+    columns = vars(n),
+    rows = n >= median(n, na.rm = TRUE))
+) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
 ```
 

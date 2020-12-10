@@ -1,41 +1,24 @@
-iop_raw %>% 
-  select(`IntraOp Path`, `IntraOp Type`) %>% 
-  group_by(`IntraOp Type`, `IntraOp Path`) %>% 
-  summarize(n = n()) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = `IntraOp Type`, values_from = n) %>% 
-  rowwise() %>% 
+# Bone marrow cases
+# Summaries are per case, not per specimen
+# Bone marrow interpretations are the sum of unique combinations of 
+# Result ID and Pathologist
+
+marrow_raw %>% 
+  select(PATHOLOGIST, `RESULT ID`, Create) %>% 
+  rename(
+    Pathologist = PATHOLOGIST, 
+    `Result ID` = `RESULT ID`
+  ) %>% 
   mutate(
-    Total = sum(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, na.rm = TRUE)
+    create_date = as_date(mdy_hm(Create))
   ) %>% 
-  arrange(desc(Total)) %>% 
-  gt(
-    rowname_col = "IntraOp Path",
-    groupname_col = "IntraOp Type"
+  filter(
+    create_date >= "2020-07-01" & 
+      create_date <= "2020-09-30"
   ) %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = NULL,
-    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`,Total),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgreen"),
-    locations = cells_body(
-      rows = Total >= median(Total))
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "indianred3"),
-      cell_text(color = "white")
-    ),
-    locations = cells_body(
-      rows = median(Total) > Total)
-  ) %>% 
-  tab_options(
-    column_labels.font.weight = "bold",
-    table.font.size = px(11), 
-    table.width = pct(50)
-  )
+  group_by(Pathologist, `Result ID`) %>% 
+  distinct() %>% 
+  ungroup() %>% 
+  select(Pathologist) %>% 
+  mutate(n = sum(n())) %>% 
+  arrange(desc(n))
