@@ -611,3 +611,161 @@ tab_style(
   )
 ```
 
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2020 Q3 Bone Marrow Cases
+
+```{r bone-marrow, echo=FALSE, message=FALSE}
+# Bone marrow cases
+# Summaries are per case, not per specimen
+# Bone marrow interpretations are the sum of unique combinations of 
+# Result ID and Pathologist
+
+marrow_raw %>% 
+  select(PATHOLOGIST, `RESULT ID`, Create) %>% 
+  rename(
+    Pathologist = PATHOLOGIST, 
+    `Result ID` = `RESULT ID`
+  ) %>% 
+  mutate(
+    create_date = as_date(mdy_hm(Create))
+  ) %>% 
+  filter(
+    !is.na(Pathologist),
+    create_date >= "2020-07-01" & 
+      create_date <= "2020-09-30"
+  ) %>% 
+  group_by(Pathologist, `Result ID`) %>% 
+  distinct() %>% 
+  group_by(Pathologist) %>% 
+  summarize(n = sum(n(), na.rm = TRUE)) %>% 
+  arrange(desc(n)) %>% 
+  ungroup() %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2020 Q3 Flow Cytology Reports
+
+```{r flow, echo=FALSE, message=FALSE}
+# Flow Cytology Reports
+# Number of reports signed
+
+flow_raw %>% 
+  select(Pathologist, `Not Deleted`) %>% 
+  rename(n = `Not Deleted`) %>% 
+  arrange(desc(n)) %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2020 Q3 Peripheral Blood Reviews
+
+```{r peripheral-blood, echo=FALSE, message=FALSE}
+# Peripheral blood reviews
+
+pblood_raw %>% 
+  select(Pathologist, `Not Deleted`) %>% 
+  rename(n = `Not Deleted`) %>% 
+  arrange(desc(n)) %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```
+
