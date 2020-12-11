@@ -21,7 +21,8 @@ library(gt)
 
 ![](sp-logo.png){width=25%}
 
-# Cases and Blocks Signed-out by Pathologist: <br>Jan 2019 -- Sep 2020
+# Pathologist Productivity Metrics
+## 2020 Quarter 3
 
 <br>
 
@@ -105,13 +106,15 @@ cases_clean <-
     yr = year(ddate),
     mth = month(ddate, label = TRUE, abbr = TRUE)
   ) %>% 
-  filter(ddate < "2020-10-01",
-         !Pathologist %in% c("Brooke Caufield, MD", "Joseph Lillis, MD", 
-           "Laurel Stearns, DO")) %>% 
-  group_by(yr, mth, Pathologist) %>% 
-  summarize(
-    Cases = as.numeric(sum(n, na.rm = TRUE))
+  filter(ddate < "2020-10-01" & 
+           ddate >= "2020-07-01",
+         !Pathologist %in% 
+           c("Brooke Caufield, MD", 
+             "Joseph Lillis, MD", 
+             "Laurel Stearns, DO")
   ) %>% 
+  group_by(yr, mth, Pathologist) %>% 
+  summarize(Cases = as.numeric(sum(n, na.rm = TRUE))) %>% 
   ungroup()
 
 # Clean AP cases and blocks data -----
@@ -123,7 +126,8 @@ ap_clean <-
     mth = month(`Create Date`, label = TRUE, abbr = TRUE)
   ) %>% 
   filter(
-    `Create Date` < "2020-10-01",
+    `Create Date` < "2020-10-01" & 
+      `Create Date` >= "2020-07-01",
     status != "Deleted", 
   ) %>% 
   group_by(yr, mth, `Primary Pathologist`) %>% 
@@ -146,7 +150,7 @@ cases_wide <-
   rowwise() %>% 
   mutate(
     Total = sum(
-      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+      Jul, Aug, Sep, na.rm = TRUE)
   )
 
 ap_cases <- 
@@ -156,7 +160,7 @@ ap_cases <-
   rowwise() %>% 
   mutate(
     Total = sum(
-      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+      Jul, Aug, Sep, na.rm = TRUE)
   )
 
 ap_blocks <- 
@@ -166,7 +170,7 @@ ap_blocks <-
   rowwise() %>% 
   mutate(
     Total = sum(
-      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+      Jul, Aug, Sep, na.rm = TRUE)
   )
 ```
 
@@ -179,52 +183,9 @@ fns_labels <-
   )
 ```
 
-## 2019 All Cases
-
-```{r 2019-cases, echo=FALSE, message=FALSE}
-# 2019 Monthly case counts by pathologist
-cases_wide %>% 
-  filter(yr == 2019) %>% 
-  select(-yr) %>% 
-  rename(rowname = Pathologist) %>% 
-  arrange(desc(Total)) %>% 
-  gt(groupname_col = "yr") %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = NULL,
-    columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgreen"),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = Total >= median(Total))
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "indianred3"),
-      cell_text(color = "white")
-      ),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = median(Total) > Total)
-  ) %>% 
-  tab_options(
-    column_labels.font.weight = "bold",
-    table.font.size = px(11), 
-    table.width = pct(85)
-  )
-```
-
-<p style="page-break-before: always;"></p>
-
 <br>
 
-## 2020 (Q1 -- Q3) All Cases
+## Total Cases Signed Out
 
 ```{r 2020-cases, echo=FALSE, message=FALSE}
 # 2020 Monthly case counts by pathologist
@@ -238,7 +199,7 @@ cases_wide %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      vars(Jul, Aug, Sep, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -261,7 +222,7 @@ cases_wide %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(85)
+    table.width = pct(70)
   )
 ```
 
@@ -269,52 +230,8 @@ cases_wide %>%
 
 <br>
 
-## 2019 Anatomic Pathology Cases
+## Anatomic Pathology Cases Signed Out
 
-```{r AP2019-cases, echo=FALSE, message=FALSE}
-# 2019 Monthly case counts by pathologist
-ap_cases %>% 
-  filter(yr == 2019) %>% 
-  select(-yr) %>% 
-  rename(rowname = `Primary Pathologist`) %>% 
-  arrange(desc(Total)) %>% 
-  gt(groupname_col = "yr") %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = NULL,
-    columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgreen"),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = Total >= median(Total))
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "indianred3"),
-      cell_text(color = "white")
-      ),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = median(Total) > Total)
-  ) %>% 
-  tab_options(
-    column_labels.font.weight = "bold",
-    table.font.size = px(11), 
-    table.width = pct(85)
-  )
-```
-
-<p style="page-break-before: always;"></p>
-
-<br>
-
-## 2020 (Q1 -- Q3) Anatomic Pathology Cases
 ```{r AP2020-cases, echo=FALSE, message=FALSE}
 # 2020 Monthly case counts by pathologist
 ap_cases %>% 
@@ -327,7 +244,7 @@ ap_cases %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      vars(Jul, Aug, Sep, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -350,7 +267,7 @@ ap_cases %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(85)
+    table.width = pct(70)
   )
 ```
 
@@ -358,52 +275,7 @@ ap_cases %>%
 
 <br>
 
-## 2019 Anatomic Pathology Blocks
-
-```{r AP2019-blocks, echo=FALSE, message=FALSE}
-# monthly block count by pathologist
-ap_blocks %>% 
-  filter(yr == 2019) %>% 
-  select(-yr) %>% 
-  rename(rowname = `Primary Pathologist`) %>% 
-  arrange(desc(Total)) %>% 
-  gt(groupname_col = "yr") %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = NULL,
-    columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgreen"),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = Total >= median(Total))
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "indianred3"),
-      cell_text(color = "white")
-      ),
-    locations = cells_body(
-      columns = vars(Total),
-      rows = median(Total) > Total)
-  ) %>% 
-  tab_options(
-    column_labels.font.weight = "bold",
-    table.font.size = px(11), 
-    table.width = pct(85)
-  )
-```
-
-<p style="page-break-before: always;"></p>
-
-<br>
-
-## 2020 (Q1 -- Q3) Anatomic Pathology Blocks
+## Anatomic Pathology Blocks Processed
 
 ```{r AP2020-blocks, echo=FALSE, message=FALSE}
 # monthly block count by pathologist
@@ -417,7 +289,7 @@ ap_blocks %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      vars(Jul, Aug, Sep, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -440,7 +312,7 @@ ap_blocks %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(85)
+    table.width = pct(70)
   )
 ```
 
@@ -448,7 +320,7 @@ ap_blocks %>%
 
 <br>
 
-## 2020 Q3 Intraoperative Consultations Performed
+## Intraoperative Consultations Performed
 
 ```{r intra-op, echo=FALSE, message=FALSE}
 iop_raw %>% 
@@ -552,7 +424,7 @@ iop_raw %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(55)
+    table.width = pct(70)
   )
 ```
 
@@ -560,9 +432,9 @@ iop_raw %>%
 
 <br>
 
-## 2020 Q3 Internal Quality Control
+## Internal Quality Control
 
-### Internal Consulations Performed
+### Consulations Performed
 
 ```{r internal-qc, echo=FALSE, message=FALSE}
 # Multiple pathologists can consult on one case. 
@@ -607,7 +479,7 @@ tab_style(
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(55)
+    table.width = pct(70)
   )
 ```
 
@@ -615,7 +487,7 @@ tab_style(
 
 <br>
 
-## 2020 Q3 Bone Marrow Cases
+## Bone Marrow Cases
 
 ```{r bone-marrow, echo=FALSE, message=FALSE}
 # Bone marrow cases
@@ -672,15 +544,16 @@ marrow_raw %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(55)
+    table.width = pct(70)
   )
 ```
 
-<p style="page-break-before: always;"></p>
+<!-- <p style="page-break-before: always;"></p> -->
 
 <br>
+<br>
 
-## 2020 Q3 Flow Cytology Reports
+## Flow Cytology Reports
 
 ```{r flow, echo=FALSE, message=FALSE}
 # Flow Cytology Reports
@@ -719,7 +592,7 @@ flow_raw %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(55)
+    table.width = pct(70)
   )
 ```
 
@@ -727,7 +600,7 @@ flow_raw %>%
 
 <br>
 
-## 2020 Q3 Peripheral Blood Reviews
+## Peripheral Blood Reviews
 
 ```{r peripheral-blood, echo=FALSE, message=FALSE}
 # Peripheral blood reviews
@@ -765,7 +638,7 @@ pblood_raw %>%
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
-    table.width = pct(55)
+    table.width = pct(70)
   )
 ```
 
