@@ -37,12 +37,12 @@ cases_raw <- sapply(cases, readxl::read_excel, simplify = FALSE) %>%
   bind_rows(.id = "id") %>% 
   select(-id) 
 
-# AP cases and blocks raw data -----
+# Surgical cases and blocks raw data -----
 files <- list.files(path = here("data"),
                     pattern = "^(\\d{4})(-\\d.+)\\.xls",
                     full.names = TRUE)
 
-ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
+surg_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
   bind_rows(.id = "id") %>% 
   select(-id) 
 
@@ -117,9 +117,9 @@ cases_clean <-
   summarize(Cases = as.numeric(sum(n, na.rm = TRUE))) %>% 
   ungroup()
 
-# Clean AP cases and blocks data -----
-ap_clean <- 
-  ap_raw %>% 
+# Clean Surgical cases and blocks data -----
+surg_clean <- 
+  surg_raw %>% 
   mutate(
     `Create Date` = mdy(`Create Date`),
     yr = year(`Create Date`),
@@ -153,8 +153,8 @@ cases_wide <-
       Jul, Aug, Sep, na.rm = TRUE)
   )
 
-ap_cases <- 
-  ap_clean %>% 
+surg_cases <- 
+  surg_clean %>% 
   select(-Blocks) %>% 
   pivot_wider(names_from = mth, values_from = Cases) %>% 
   rowwise() %>% 
@@ -163,8 +163,8 @@ ap_cases <-
       Jul, Aug, Sep, na.rm = TRUE)
   )
 
-ap_blocks <- 
-  ap_clean %>% 
+surg_blocks <- 
+  surg_clean %>% 
   select(-Cases) %>% 
   pivot_wider(names_from = mth, values_from = Blocks) %>% 
   rowwise() %>% 
@@ -230,11 +230,11 @@ cases_wide %>%
 
 <br>
 
-## Anatomic Pathology Cases Signed Out
+## Surgical Cases Signed Out
 
 ```{r AP2020-cases, echo=FALSE, message=FALSE}
 # 2020 Monthly case counts by pathologist
-ap_cases %>% 
+surg_cases %>% 
   filter(yr == 2020) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
@@ -275,11 +275,11 @@ ap_cases %>%
 
 <br>
 
-## Anatomic Pathology Blocks Processed
+## Surgical Blocks Processed
 
 ```{r AP2020-blocks, echo=FALSE, message=FALSE}
 # monthly block count by pathologist
-ap_blocks %>% 
+surg_blocks %>% 
   filter(yr == 2020) %>% 
   select(-yr) %>% 
   rename(rowname = `Primary Pathologist`) %>% 
