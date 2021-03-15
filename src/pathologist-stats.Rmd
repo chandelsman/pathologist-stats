@@ -7,13 +7,12 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
 # load libraries
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-library(here)
 library(gt)
 ```
 
@@ -25,70 +24,82 @@ library(gt)
 
 <br>
 
-```{r import-clean-data, echo=FALSE, message=FALSE}
+```{r import-data, echo=FALSE, message=FALSE}
 #import and clean data for all cases
 # All signed out cases raw data -----
-cases <- list.files(path = here("data"),
-                    pattern = "^(\\d{4})(-cases)\\.xls",
-                    full.names = TRUE)
-
-cases_raw <- sapply(cases, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id) 
+cases_raw <-
+  list.files(path = here::here("data"),
+             pattern = "^(\\d{4})(-cases)\\.xls",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
 
 # AP cases and blocks raw data -----
-files <- list.files(path = here("data"),
-                    pattern = "^(\\d{4})(-\\d.+)\\.xls",
-                    full.names = TRUE)
-
-ap_raw <- sapply(files, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id) 
+ap_raw <-
+  list.files(path = here::here("data"),
+             pattern = "^(\\d{4})(-\\d.+)\\.xls",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
 
 # Intraoperative consultations raw data -----
-iop <- list.files(path = here("data"),
-                  pattern = "(\\d+)(-iop)(\\.xls)",
-                  full.names = TRUE)
-
-iop_raw <- sapply(iop, readxl::read_excel, simplify = FALSE) %>%
-  bind_rows(.id = "id") %>%
-  select(-id)
+iop_raw <-
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-iop)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
 
 # Internal consultations raw data -----
-iconsult <- list.files(path = here("data"),
-                       pattern = "(\\d+)(-iconsult)(\\.xls)",
-                       full.names = TRUE)
-
-iconsult_raw <- sapply(iconsult, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id)
+iconsult_raw <-
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-iconsult)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
 
 # Bone marrow cases raw data -----
-marrow <- list.files(path = here("data"), 
-                     pattern = "(\\d+)(-marrow)(\\.xls)",
-                     full.names = TRUE)
-marrow_raw <- sapply(marrow, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id)
+marrow_raw <-
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-marrow)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
 
 # Flow cytometry cases raw data -----
-flow <- list.files(path = here("data"),
-                   pattern = "(\\d+)(-flow)(\\.xls)",
-                   full.names = TRUE)
-
-flow_raw <- sapply(flow, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id) %>% 
-  filter(!str_detect(Pathologist, c("-|Total")))
+flow_raw <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-flow)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect(Pathologist, "-|Total"))
 
 # Peripheral blood reviews raw data -----
-pblood <- list.files(path = here("data"),
-                               pattern = "(\\d+)(-peripheral-blood)(\\.xls)",
-                               full.names = TRUE)
-pblood_raw <- sapply(pblood, readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows(.id = "id") %>% 
-  select(-id) %>% 
+pblood <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-peripheral-blood)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
   filter(!str_detect(Pathologist, "-|Total"))
+
+# Urine FISH cases -----
+ufish <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-urine-fish)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect(Pathologist, "-|Total"))
+
+# VIAS cases
+vias <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-vias)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows()
 ```
 
 ```{r clean-data, echo=FALSE, message=FALSE}
@@ -732,7 +743,7 @@ flow_raw %>%
 ```{r peripheral-blood, echo=FALSE, message=FALSE}
 # Peripheral blood reviews
 
-pblood_raw %>% 
+pblood %>% 
   select(Pathologist, `Not Deleted`) %>% 
   rename(n = `Not Deleted`) %>% 
   arrange(desc(n)) %>% 
