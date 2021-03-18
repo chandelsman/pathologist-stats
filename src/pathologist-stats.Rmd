@@ -145,6 +145,55 @@ ap_clean <-
   ungroup()
 ```
 
+```{r standardize names, echo=FALSE}
+#Cases Clean 
+path_names <- cases_clean$Pathologist
+
+fn_ln <- gsub("(.*),.*", "\\1", path_names)
+
+firstname = sapply(strsplit(fn_ln, ' '), function(x) x[1])
+
+lastname = sapply(strsplit(fn_ln, ' '), function(x) x[length(x)])
+
+cases_clean$Pathologist <- paste(lastname, firstname, sep = ' , ')
+  
+#Iconsult 
+
+iconsult_pathnames <- iconsult_raw$`Consulting Pathologist`
+
+iconsult_fnln <- gsub("(.*),.*", "\\1", iconsult_pathnames)
+
+iconsult_firstname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[1])
+
+iconsult_lastname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[length(x)])
+
+iconsult_raw$`Consulting Pathologist` <- 
+  paste(iconsult_lastname, iconsult_firstname, sep = ' , ')
+
+#Flow Raw
+fr_pathnames <- flow_raw$Pathologist
+
+fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
+
+fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
+
+fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
+
+flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ' , ')
+
+#Pblood 
+pb_pathnames <- pblood$Pathologist
+
+pb_fnln <- gsub("(.*),.*", "\\1", pb_pathnames)
+
+pb_firstname = sapply(strsplit(pb_fnln, ' '), function(x) x[1])
+
+pb_lastname = sapply(strsplit(pb_fnln, ' '), function(x) x[length(x)])
+
+pblood$Pathologist <- paste(pb_lastname, pb_firstname, sep = ' , ')
+
+```
+
 ```{r pivot-data, echo=FALSE, message=FALSE}
 # Pivot data to wide format for tabulation
 cases_wide <-  
