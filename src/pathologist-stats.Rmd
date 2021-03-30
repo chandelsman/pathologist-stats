@@ -64,7 +64,7 @@ marrow_raw <-
              pattern = "(\\d+)(-marrow)(\\.xls)",
              full.names = TRUE) %>%
   sapply(readxl::read_excel, simplify = FALSE) %>%
-  bind_rows()
+  bind_rows() 
 
 # Flow cytometry cases raw data -----
 flow_raw <- 
@@ -141,7 +141,7 @@ ap_clean <-
   summarize(
     Cases = as.numeric(sum(n())),
     Blocks = as.numeric(sum(Blocks))
-  ) %>% 
+  )  %>% 
   ungroup()
 ```
 
@@ -155,8 +155,25 @@ firstname = sapply(strsplit(fn_ln, ' '), function(x) x[1])
 
 lastname = sapply(strsplit(fn_ln, ' '), function(x) x[length(x)])
 
-cases_clean$Pathologist <- paste(lastname, firstname, sep = ' , ')
+cases_clean$Pathologist <- paste(lastname, firstname, sep = ', ')
+
+#vias
+
+ln_fn <- tibble(lastname, firstname) %>% 
+  unique()
   
+vias$`VIAS PATH`= str_to_title(vias$`VIAS PATH`)
+
+vias <- merge(vias, ln_fn, by.x= 'VIAS PATH', by.y = 'lastname') 
+
+vias_fn = vias$firstname
+vias_ln = vias$`VIAS PATH`
+
+vias$`VIAS PATH` <- paste(vias_ln, vias_fn, sep = ', ')
+
+vias <- select(vias, -firstname)
+
+
 #Iconsult 
 
 iconsult_pathnames <- iconsult_raw$`Consulting Pathologist`
@@ -168,7 +185,7 @@ iconsult_firstname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[1])
 iconsult_lastname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[length(x)])
 
 iconsult_raw$`Consulting Pathologist` <- 
-  paste(iconsult_lastname, iconsult_firstname, sep = ' , ')
+  paste(iconsult_lastname, iconsult_firstname, sep = ', ')
 
 #Flow Raw
 fr_pathnames <- flow_raw$Pathologist
@@ -179,7 +196,7 @@ fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
 
 fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
 
-flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ' , ')
+flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
 
 #Pblood 
 pb_pathnames <- pblood$Pathologist
@@ -190,7 +207,58 @@ pb_firstname = sapply(strsplit(pb_fnln, ' '), function(x) x[1])
 
 pb_lastname = sapply(strsplit(pb_fnln, ' '), function(x) x[length(x)])
 
-pblood$Pathologist <- paste(pb_lastname, pb_firstname, sep = ' , ')
+pblood$Pathologist <- paste(pb_lastname, pb_firstname, sep = ', ')
+
+#Ufish
+
+uf_pathnames <- ufish$Pathologist
+
+uf_fnln <- gsub("(.*),.*", "\\1", uf_pathnames)
+
+uf_firstname = sapply(strsplit(uf_fnln, ' '), function(x) x[1])
+
+uf_lastname = sapply(strsplit(uf_fnln, ' '), function(x) x[length(x)])
+
+ufish$Pathologist <- paste(uf_lastname, uf_firstname, sep = ', ')
+
+```
+
+```{r anonymize names, echo=FALSE}
+library(stringi)
+
+path_namekey <- cases_clean %>% 
+  select(`Pathologist`) %>% 
+  unique() %>%
+  mutate(Path_num = stri_rand_strings(25,4, pattern = "[0-9]"))
+         
+
+#Cases Clean 
+cases_clean <- merge(cases_clean, path_namekey, by= 'Pathologist')
+
+#flow raw
+flow_raw <- merge(flow_raw, name_key, by= 'Pathologist')
+
+#Pblood
+pblood <- merge(pblood, name_key, by= 'Pathologist')
+
+#ufish
+ufish <- merge(ufish, path_namekey, by= 'Pathologist')
+
+#ap clean
+ap_clean<- merge(ap_clean,path_namekey, by.x = "Primary Pathologist", by.y = "Pathologist", all.x = TRUE)
+
+#i consult
+iconsult_raw <- 
+  merge(iconsult_raw, path_namekey, by.x = "Consulting Pathologist", by.y = "Pathologist", all.x = TRUE)
+
+#iop 
+iop_raw <- merge(iop_raw, path_namekey, by.x = "IntraOp Path", by.y = "Pathologist", all.x = TRUE)
+
+#marrow 
+marrow_raw <- merge(marrow_raw, path_namekey, by.x = "PATHOLOGIST", by.y = "Pathologist", all.x = TRUE)
+
+#VIAS
+vias <- merge(vias, path_namekey, by.x = "VIAS PATH", by.y = "Pathologist", all.x = TRUE)
 
 ```
 
@@ -686,25 +754,24 @@ tab_style(
 marrow_raw %>% 
   select(PATHOLOGIST, `RESULT ID`, Create) %>% 
   rename(
-    Pathologist = PATHOLOGIST, 
     `Result ID` = `RESULT ID`
   ) %>% 
   mutate(
     create_date = as_date(mdy_hm(Create))
   ) %>% 
   filter(
-    !is.na(Pathologist),
+    !is.na(PATHOLOGIST),
     create_date >= "2020-07-01" & 
       create_date <= "2020-09-30"
   ) %>% 
-  group_by(Pathologist, `Result ID`) %>% 
+  group_by(PATHOLOGIST, `Result ID`) %>% 
   distinct() %>% 
-  group_by(Pathologist) %>% 
+  group_by(PATHOLOGIST) %>% 
   summarize(n = sum(n(), na.rm = TRUE)) %>% 
   arrange(desc(n)) %>% 
   ungroup() %>% 
   gt(
-    rowname_col = "Pathologist"
+    rowname_col = "PATHOLOGIST"
   ) %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
