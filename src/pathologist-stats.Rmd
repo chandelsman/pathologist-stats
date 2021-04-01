@@ -236,10 +236,10 @@ path_namekey <- cases_clean %>%
 cases_clean <- merge(cases_clean, path_namekey, by= 'Pathologist')
 
 #flow raw
-flow_raw <- merge(flow_raw, name_key, by= 'Pathologist')
+flow_raw <- merge(flow_raw, path_namekey, by= 'Pathologist')
 
 #Pblood
-pblood <- merge(pblood, name_key, by= 'Pathologist')
+pblood <- merge(pblood, path_namekey, by= 'Pathologist')
 
 #ufish
 ufish <- merge(ufish, path_namekey, by= 'Pathologist')
