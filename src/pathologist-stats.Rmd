@@ -469,7 +469,48 @@ cases_wide %>%
     table.width = pct(85)
   )
 ```
+<p style="page-break-before: always;"></p>
 
+<br>
+
+## 2021 Part A Q1
+
+```{r PartA-2021, echo=FALSE, message=FALSE}
+partA_cases %>% 
+  select(-year) %>% 
+  rename(rowname = 'Name') %>% 
+  arrange(desc(Total)) %>% 
+  gt(groupname_col = "year") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = 
+      vars(Jan, Feb, Total),
+    fns = fns_labels, 
+    formatter = fmt_number,
+    decimals= 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = median(Total) > Total)
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```
 <p style="page-break-before: always;"></p>
 
 <br>
