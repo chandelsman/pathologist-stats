@@ -370,9 +370,8 @@ partA_cases <-
   rowwise() %>% 
   mutate(
     Total = sum(
-      Jan, Feb,na.rm = TRUE)
-    ) %>% 
-  relocate(Jan, .before = Feb)
+      Jan, Feb, Mar, na.rm = TRUE)
+    ) 
 ```
 
 ```{r summary-fns, echo=FALSE, message=FALSE}
