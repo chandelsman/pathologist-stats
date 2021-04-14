@@ -55,7 +55,7 @@ iconsult_raw <-
   list.files(path = here::here("data"),
              pattern = "(\\d+)(-iconsult)(\\.xls)",
              full.names = TRUE) %>%
-  sapply(readxl::read_excel, simplify = FALSE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
   bind_rows()
 
 # Bone marrow cases raw data -----
@@ -67,13 +67,22 @@ marrow_raw <-
   bind_rows() 
 
 # Flow cytometry cases raw data -----
-flow_raw <- 
+flow_raw20 <- 
   list.files(path = here::here("data"),
-             pattern = "(\\d+)(-flow)(\\.xls)",
+             pattern = "([2020q3])(-flow)(\\.xls)",
              full.names = TRUE) %>% 
   sapply(readxl::read_excel, simplify = FALSE) %>% 
   bind_rows() %>% 
-  filter(!str_detect(Pathologist, "-|Total"))
+  filter(!str_detect('Pathologist', "-|Total"))
+
+flow_raw21 <- 
+  list.files(path = here::here("data"),
+             pattern = "([2021q1])(-flow)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect('Pathologist', "-|Total"))
+
 
 # Peripheral blood reviews raw data -----
 pblood <- 
@@ -164,14 +173,26 @@ partA_2021 <-
   select(1:3) %>% 
   na.omit() %>% 
   mutate(
-    year= year(Date), 
-    month= month.abb[month(Date)]) %>% 
+    year = year(Date),
+    month = month(Date, label = TRUE, abbr = TRUE)
+  ) %>% 
   select(-Date) %>% 
   group_by(year,month, Name) %>% 
   summarize(
     Cases = sum(Hours)) %>% 
   relocate(Name, .before=year) %>% 
   ungroup()
+
+#Clean Iconsult ----
+
+iconsult_clean <- 
+  iconsult_raw %>% 
+  mutate(
+    `Collected date` = mdy(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
 
 ```
 
@@ -197,6 +218,7 @@ vias$`VIAS PATH`= str_to_title(vias$`VIAS PATH`)
 vias <- merge(vias, ln_fn, by.x= 'VIAS PATH', by.y = 'lastname') 
 
 vias_fn = vias$firstname
+
 vias_ln = vias$`VIAS PATH`
 
 vias$`VIAS PATH` <- paste(vias_ln, vias_fn, sep = ', ')
@@ -218,7 +240,7 @@ iconsult_raw$`Consulting Pathologist` <-
   paste(iconsult_lastname, iconsult_firstname, sep = ', ')
 
 #Flow Raw
-fr_pathnames <- flow_raw$Pathologist
+fr_pathnames <- flow_raw20$Pathologist
 
 fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
 
@@ -226,7 +248,19 @@ fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
 
 fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
 
-flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
+flow_raw20$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
+
+#flow raw 21
+
+fr_pathnames <- flow_raw21$Pathologist
+
+fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
+
+fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
+
+fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
+
+flow_raw21$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
 
 #Pblood 
 pb_pathnames <- pblood$Pathologist
@@ -285,9 +319,14 @@ cases_clean <- merge(
               cases_clean, path_namekey, 
               by= 'Pathologist')
 #flow raw
-flow_raw <- merge(
-            flow_raw, path_namekey, 
+flow_raw20 <- merge(
+            flow_raw20, path_namekey, 
             by= 'Pathologist')
+#flow raw 21
+flow_raw21 <- merge(
+            flow_raw21, path_namekey, 
+            by= 'Pathologist')
+
 #Pblood
 pblood <- merge(
           pblood, path_namekey, 
@@ -406,8 +445,8 @@ cases_wide %>%
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
       columns = vars(Total),
-      rows = Total >= median(Total))
-  ) %>%
+        rows = Total >= median(Total))
+    ) %>%
   tab_style(
     style = list(
       cell_fill(color = "indianred3"),
@@ -484,7 +523,7 @@ partA_cases %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Total),
+      vars(Jan, Feb, Mar, Total),
     fns = fns_labels, 
     formatter = fmt_number,
     decimals= 0
@@ -814,7 +853,64 @@ iop_raw %>%
 # Consults performed is the sum of unique combinations of accession number 
 # and Consulting Pathologist
 
-iconsult_raw %>% 
+iconsult_clean%>% 
+  filter(yr == 2020) %>% 
+  select(Accession, `Consulting Pathologist`) %>% 
+  rename(Pathologist = `Consulting Pathologist`) %>% 
+  group_by(Pathologist, Accession) %>% 
+  distinct() %>% 
+  group_by(Pathologist) %>% 
+  summarize(n = sum(n())) %>% 
+  arrange(desc(n)) %>% 
+  ungroup() %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+tab_style(
+  style = cell_fill(color = "lightgreen"),
+  locations = cells_body(
+    columns = vars(n),
+    rows = n >= median(n, na.rm = TRUE))
+) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2021 Internal Quality Control
+
+### Internal Consulations Performed
+
+```{r internal-qc-21, echo=FALSE, message=FALSE}
+# Multiple pathologists can consult on one case. 
+# Consults performed is the sum of unique combinations of accession number 
+# and Consulting Pathologist
+
+iconsult_clean%>% 
+  filter(yr == 2021) %>% 
   select(Accession, `Consulting Pathologist`) %>% 
   rename(Pathologist = `Consulting Pathologist`) %>% 
   group_by(Pathologist, Accession) %>% 
@@ -924,13 +1020,77 @@ marrow_raw %>%
 
 <br>
 
+## 2021 Q1 Bone Marrow Cases
+
+```{r bone-marrow-21, echo=FALSE, message=FALSE}
+# Bone marrow cases
+# Summaries are per case, not per specimen
+# Bone marrow interpretations are the sum of unique combinations of 
+# Result ID and Pathologist
+
+marrow_raw %>% 
+  select(PATHOLOGIST, `RESULT ID`, Create) %>% 
+  rename(
+    `Result ID` = `RESULT ID`
+  ) %>% 
+  mutate(
+    create_date = as_date(mdy_hm(Create))
+  ) %>% 
+  filter(
+    !is.na(PATHOLOGIST),
+    create_date >= "2021-01-01" & 
+      create_date <= "2021-03-31"
+  ) %>% 
+  group_by(PATHOLOGIST, `Result ID`) %>% 
+  distinct() %>% 
+  group_by(PATHOLOGIST) %>% 
+  summarize(n = sum(n(), na.rm = TRUE)) %>% 
+  arrange(desc(n)) %>% 
+  ungroup() %>% 
+  gt(
+    rowname_col = "PATHOLOGIST"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
 ## 2020 Q3 Flow Cytology Reports
 
 ```{r flow, echo=FALSE, message=FALSE}
 # Flow Cytology Reports
 # Number of reports signed
 
-flow_raw %>% 
+flow_raw20 %>% 
   select(Pathologist, `Not Deleted`) %>% 
   rename(n = `Not Deleted`) %>% 
   arrange(desc(n)) %>% 
@@ -966,7 +1126,52 @@ flow_raw %>%
     table.width = pct(55)
   )
 ```
+<p style="page-break-before: always;"></p>
 
+<br>
+
+## 2021 Flow Cytology Reports
+
+```{r flow-21, echo=FALSE, message=FALSE}
+# Flow Cytology Reports
+# Number of reports signed
+
+flow_raw21 %>% 
+  select(Pathologist, `Not Deleted`) %>% 
+  rename(n = `Not Deleted`) %>% 
+  arrange(desc(n)) %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
 <p style="page-break-before: always;"></p>
 
 <br>
