@@ -43,9 +43,16 @@ ap_raw <-
   bind_rows()
 
 # Intraoperative consultations raw data -----
-iop_raw <-
+iop_raw20 <-
   list.files(path = here::here("data"),
-             pattern = "(\\d+)(-iop)(\\.xls)",
+             pattern = "([2020q3])(-iop)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
+
+iop_raw21 <-
+  list.files(path = here::here("data"),
+             pattern = "([2021q1])(-iop)(\\.xls)",
              full.names = TRUE) %>%
   sapply(readxl::read_excel, simplify = FALSE) %>%
   bind_rows()
@@ -184,7 +191,26 @@ iconsult_clean <-
     mth = month(`Collected date`, label = TRUE, abbr = TRUE)
   )
 
+#Clean IOP 
 
+iop_raw20 <- 
+  iop_raw20 %>% 
+  mutate(
+    `Collected date` = ymd(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
+iop_raw21 <- 
+  iop_raw21 %>% 
+  mutate(
+    `Collected date` = mdy(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
+iop_clean <- 
+  full_join(iop_raw20, iop_raw21) 
 ```
 
 ```{r standardize names, echo=FALSE}
@@ -322,8 +348,8 @@ iconsult_raw <- merge(
                 by.x = "Consulting Pathologist", by.y = "Pathologist", 
                 all.x = TRUE)
 #iop 
-iop_raw <- merge(
-            iop_raw, path_namekey, 
+iop_clean <- merge(
+            iop_clean, path_namekey, 
             by.x = "IntraOp Path", by.y = "Pathologist", 
             all.x = TRUE)
 #marrow 
@@ -710,8 +736,123 @@ ap_blocks %>%
 
 ## 2020 Q3 Intraoperative Consultations Performed
 
-```{r intra-op, echo=FALSE, message=FALSE}
-iop_raw %>% 
+```{r intra-op 20, echo=FALSE, message=FALSE}
+iop_clean %>% 
+  filter(yr =='2020') %>% 
+  select(`IntraOp Path`, `IntraOp Type`) %>% 
+  group_by(`IntraOp Type`, `IntraOp Path`) %>% 
+  summarize(n = n()) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = `IntraOp Type`, values_from = n) %>% 
+  rowwise() %>% 
+  mutate(
+    Total = sum(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, na.rm = TRUE)
+  ) %>% 
+  arrange(desc(Total)) %>% 
+  gt(
+    rowname_col = "IntraOp Path",
+    groupname_col = "IntraOp Type"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(`FNA Adequacy`),
+  #     rows = `FNA Adequacy` >= median(`FNA Adequacy`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(`FNA Adequacy`),
+  #     rows = `FNA Adequacy` < median(`FNA Adequacy`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(Frozen),
+  #     rows = Frozen >= median(Frozen, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(Frozen),
+  #     rows = Frozen < median(Frozen, na.rm = TRUE)) 
+  # ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(Gross),
+  #     rows = Gross >= median(Gross, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(Gross),
+  #     rows = Gross < median(Gross, na.rm = TRUE))
+  # ) %>% 
+  # tab_style(
+  #   style = cell_fill(color = "lightgreen"),
+  #   locations = cells_body(
+  #     columns = vars(`Touch Prep`),
+  #     rows = `Touch Prep` >= median(`Touch Prep`, na.rm = TRUE))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "indianred3"),
+  #     cell_text(color = "white")
+  #   ),
+  #   locations = cells_body(
+  #     columns = vars(`Touch Prep`),
+  #     rows = `Touch Prep` < median(`Touch Prep`, na.rm = TRUE))
+  # ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = Total >= median(Total, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = Total < median(Total, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+
+## 2021 Q1 Intraoperative Consultations Performed
+
+```{r intra-op 21, echo=FALSE, message=FALSE}
+iop_clean %>% 
+  filter(yr =='2021') %>% 
   select(`IntraOp Path`, `IntraOp Type`) %>% 
   group_by(`IntraOp Type`, `IntraOp Path`) %>% 
   summarize(n = n()) %>% 
@@ -1062,11 +1203,12 @@ marrow_raw %>%
 
 ## 2020 Q3 Flow Cytology Reports
 
-```{r flow, echo=FALSE, message=FALSE}
+```{r flow 2020, echo=FALSE, message=FALSE}
 # Flow Cytology Reports
 # Number of reports signed
 
 flow_raw %>% 
+  filter(Year == '2020') %>% 
   select(Pathologist, `Not Deleted`) %>% 
   rename(n = `Not Deleted`) %>% 
   arrange(desc(n)) %>% 
@@ -1106,13 +1248,107 @@ flow_raw %>%
 
 <br>
 
+## 2021 Q1 Flow Cytology Reports
+
+```{r flow 2021, echo=FALSE, message=FALSE}
+# Flow Cytology Reports
+# Number of reports signed
+
+flow_raw %>% 
+  filter(Year == '2021') %>% 
+  select(Pathologist, `Not Deleted`) %>% 
+  rename(n = `Not Deleted`) %>% 
+  arrange(desc(n)) %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
+<p style="page-break-before: always;"></p>
+
+<br>
 
 ## 2020 Q3 Peripheral Blood Reviews
+
+```{r peripheral-blood 2020, echo=FALSE, message=FALSE}
+# Peripheral blood reviews
+
+pblood %>% 
+  filter(Year == '2020') %>% 
+  select(Pathologist, `Not Deleted`) %>% 
+  rename(n = `Not Deleted`) %>% 
+  arrange(desc(n)) %>% 
+  gt(
+    rowname_col = "Pathologist"
+  ) %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = vars(n),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n >= median(n, na.rm = TRUE))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+    ),
+    locations = cells_body(
+      columns = vars(n),
+      rows = n < median(n, na.rm = TRUE))
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(55)
+  )
+```
+
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## 2021 Q1 Peripheral Blood Reviews
 
 ```{r peripheral-blood, echo=FALSE, message=FALSE}
 # Peripheral blood reviews
 
 pblood %>% 
+  filter(Year == '2021') %>% 
   select(Pathologist, `Not Deleted`) %>% 
   rename(n = `Not Deleted`) %>% 
   arrange(desc(n)) %>% 
