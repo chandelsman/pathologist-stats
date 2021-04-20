@@ -67,22 +67,13 @@ marrow_raw <-
   bind_rows() 
 
 # Flow cytometry cases raw data -----
-flow_raw20 <- 
+flow_raw <- 
   list.files(path = here::here("data"),
-             pattern = "([2020q3])(-flow)(\\.xls)",
+             pattern = "(\\d+)(-flow)(\\.xls)",
              full.names = TRUE) %>% 
   sapply(readxl::read_excel, simplify = FALSE) %>% 
   bind_rows() %>% 
   filter(!str_detect('Pathologist', "-|Total"))
-
-flow_raw21 <- 
-  list.files(path = here::here("data"),
-             pattern = "([2021q1])(-flow)(\\.xls)",
-             full.names = TRUE) %>% 
-  sapply(readxl::read_excel, simplify = FALSE) %>% 
-  bind_rows() %>% 
-  filter(!str_detect('Pathologist', "-|Total"))
-
 
 # Peripheral blood reviews raw data -----
 pblood <- 
@@ -240,7 +231,7 @@ iconsult_raw$`Consulting Pathologist` <-
   paste(iconsult_lastname, iconsult_firstname, sep = ', ')
 
 #Flow Raw
-fr_pathnames <- flow_raw20$Pathologist
+fr_pathnames <- flow_raw$Pathologist
 
 fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
 
@@ -248,19 +239,8 @@ fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
 
 fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
 
-flow_raw20$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
+flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
 
-#flow raw 21
-
-fr_pathnames <- flow_raw21$Pathologist
-
-fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
-
-fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
-
-fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
-
-flow_raw21$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
 
 #Pblood 
 pb_pathnames <- pblood$Pathologist
@@ -319,12 +299,8 @@ cases_clean <- merge(
               cases_clean, path_namekey, 
               by= 'Pathologist')
 #flow raw
-flow_raw20 <- merge(
-            flow_raw20, path_namekey, 
-            by= 'Pathologist')
-#flow raw 21
-flow_raw21 <- merge(
-            flow_raw21, path_namekey, 
+flow_raw <- merge(
+            flow_raw, path_namekey, 
             by= 'Pathologist')
 
 #Pblood
@@ -1090,7 +1066,7 @@ marrow_raw %>%
 # Flow Cytology Reports
 # Number of reports signed
 
-flow_raw20 %>% 
+flow_raw %>% 
   select(Pathologist, `Not Deleted`) %>% 
   rename(n = `Not Deleted`) %>% 
   arrange(desc(n)) %>% 
@@ -1130,51 +1106,6 @@ flow_raw20 %>%
 
 <br>
 
-## 2021 Flow Cytology Reports
-
-```{r flow-21, echo=FALSE, message=FALSE}
-# Flow Cytology Reports
-# Number of reports signed
-
-flow_raw21 %>% 
-  select(Pathologist, `Not Deleted`) %>% 
-  rename(n = `Not Deleted`) %>% 
-  arrange(desc(n)) %>% 
-  gt(
-    rowname_col = "Pathologist"
-  ) %>% 
-  fmt_missing(everything()) %>% 
-  summary_rows(
-    groups = NULL,
-    columns = vars(n),
-    fns = fns_labels,
-    formatter = fmt_number,
-    decimals = 0
-  ) %>% 
-  tab_style(
-    style = cell_fill(color = "lightgreen"),
-    locations = cells_body(
-      columns = vars(n),
-      rows = n >= median(n, na.rm = TRUE))
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "indianred3"),
-      cell_text(color = "white")
-    ),
-    locations = cells_body(
-      columns = vars(n),
-      rows = n < median(n, na.rm = TRUE))
-  ) %>% 
-  tab_options(
-    column_labels.font.weight = "bold",
-    table.font.size = px(11), 
-    table.width = pct(55)
-  )
-```
-<p style="page-break-before: always;"></p>
-
-<br>
 
 ## 2020 Q3 Peripheral Blood Reviews
 
