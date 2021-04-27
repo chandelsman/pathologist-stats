@@ -120,6 +120,11 @@ partA_2021_raw <-
          simplify = FALSE, 
         )  %>% 
   dplyr::bind_rows()
+
+# Active CPT
+active_cpt <- 
+  readxl::read_excel(
+    here::here('data','active-cpt-codes.xlsx'))
 ```
 
 ```{r clean-data, echo=FALSE, message=FALSE}
@@ -424,6 +429,21 @@ fns_labels <-
   )
 ```
 
+```{r marrow CPT, echo=FALSE, message=FALSE}
+marrow_clean <- 
+  marrow_raw %>% 
+  select(c(PATHOLOGIST,`RESULT ID`, CPTS, Path_num)) %>% 
+  separate_rows(CPTS, convert = TRUE) %>% 
+  group_by(PATHOLOGIST)
+
+marrow_cpt <- 
+  marrow_cpt %>% 
+  count(CPTS, PATHOLOGIST) %>% 
+  merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
+  relocate(CPTS, .before = n) %>%
+  mutate(total = n * rvu)
+
+```
 ## 2019 All Cases
 
 ```{r 2019-cases, echo=FALSE, message=FALSE}
