@@ -4,6 +4,15 @@ output:
   html_document
 editor_options: 
   chunk_output_type: console
+params:
+  year_choice:
+    label: "Year"
+    value: 2021
+    input: slider
+    min: 2019
+    max: 2030
+    step: 1
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -100,7 +109,7 @@ ufish <-
   bind_rows() %>% 
   filter(!str_detect(Pathologist, "-|Total"))
 
-# VIAS cases
+# VIAS cases----
 vias <- 
   list.files(path = here::here("data"),
              pattern = "(\\d+)(-vias)(\\.xls)",
@@ -108,7 +117,7 @@ vias <-
   sapply(readxl::read_excel, simplify = FALSE) %>% 
   bind_rows()
 
-#Part A 2021
+#Part A 2021-----
 
 partA_2021_raw <-
   list.files(
@@ -121,10 +130,22 @@ partA_2021_raw <-
         )  %>% 
   dplyr::bind_rows()
 
-# Active CPT
+# Active CPT-----
 active_cpt <- 
   readxl::read_excel(
     here::here('data','active-cpt-codes.xlsx'))
+
+#Total CPT -----
+cpt_raw <- 
+  list.files(
+    path = here::here("data"), 
+    pattern = "(\\d+)(-tat)(\\.xls)",
+    full.names = TRUE
+  ) %>% 
+  sapply(readxl::read_excel, 
+         simplify = FALSE, 
+        )  %>% 
+  dplyr::bind_rows()
 ```
 
 ```{r clean-data, echo=FALSE, message=FALSE}
@@ -196,7 +217,7 @@ iconsult_clean <-
     mth = month(`Collected date`, label = TRUE, abbr = TRUE)
   )
 
-#Clean IOP 
+#Clean IOP -----
 
 iop_raw20 <- 
   iop_raw20 %>% 
@@ -216,6 +237,20 @@ iop_raw21 <-
 
 iop_clean <- 
   full_join(iop_raw20, iop_raw21) 
+
+#Clean CPT -----
+cpt_clean <- 
+  cpt_raw %>% 
+  select(PATHOLOGIST, 'RESULT ID', Create, CPTS) %>% 
+  separate_rows(CPTS, convert = TRUE) %>% 
+   mutate(
+    Create = mdy_hm(Create),
+    yr = year(Create),
+    mth = month(Create, label = TRUE, abbr = TRUE)
+  ) %>% 
+  select(-Create) %>% 
+  filter(PATHOLOGIST != c('Admin, Summit', NA))
+
 ```
 
 ```{r standardize names, echo=FALSE}
@@ -320,10 +355,11 @@ partA_2021$Name[partA_2021$Name == "Walts, Mike"] <- "Walts, Michael"
 ```{r anonymize names, echo=FALSE}
 library(stringi)
 
-path_namekey <- cases_clean %>% 
-  select(`Pathologist`) %>% 
+path_namekey <- cpt_clean %>% 
+  select(`PATHOLOGIST`) %>% 
   unique() %>%
-  mutate(Path_num = stri_rand_strings(25,4, pattern = "[0-9]"))
+  rename(Pathologist = PATHOLOGIST) %>% 
+  mutate(Path_num = stri_rand_strings(24,4, pattern = "[0-9]"))
 
 #Cases Clean 
 cases_clean <- merge(
@@ -371,6 +407,12 @@ vias <- merge(
 partA_2021 <- merge(
               partA_2021, path_namekey, 
               by.x = "Name", by.y = "Pathologist", 
+              all.x = TRUE)
+
+#CPT 
+cpt_clean <- merge(
+              cpt_clean, path_namekey, 
+              by.x = "PATHOLOGIST", by.y = "Pathologist", 
               all.x = TRUE)
 
 ```
@@ -430,19 +472,34 @@ fns_labels <-
 ```
 
 ```{r marrow CPT, echo=FALSE, message=FALSE}
+# clean marrow and isolate cpt 
+
 marrow_clean <- 
   marrow_raw %>% 
   select(c(PATHOLOGIST,`RESULT ID`, CPTS, Path_num)) %>% 
-  separate_rows(CPTS, convert = TRUE) %>% 
-  group_by(PATHOLOGIST)
+  group_by(PATHOLOGIST) %>% 
+  separate_rows(CPTS, convert = TRUE) 
 
 marrow_cpt <- 
-  marrow_cpt %>% 
-  count(CPTS, PATHOLOGIST) %>% 
+  marrow_clean %>% 
+  count(CPTS, PATHOLOGIST, Path_num) %>% 
   merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
   relocate(CPTS, .before = n) %>%
-  mutate(total = n * rvu)
+  mutate(total = n * rvu) %>% 
+  rename(cpt_count = n )
 
+```
+
+```{r total CPT, echo=FALSE, message=FALSE}
+
+cpt_total <- 
+  cpt_clean %>% 
+  count(CPTS, PATHOLOGIST, Path_num) %>% 
+  merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
+  relocate(CPTS, .before = n) %>%
+  mutate(total = n * rvu) %>% 
+  rename(cpt_count = n )
+  
 ```
 ## 2019 All Cases
 
