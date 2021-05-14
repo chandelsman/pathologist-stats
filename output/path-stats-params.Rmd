@@ -1,0 +1,592 @@
+---
+title: ''
+output: 
+  html_document
+editor_options: 
+  chunk_output_type: console
+params:
+  year_choice:
+    label: "Year"
+    value: 2021
+    input: slider
+    min: 2019
+    max: 2030
+    step: 1
+  pathologist_choice:
+    label: 'Pathologist' 
+    value: 'Alam, Shadia'
+    input: select 
+    choices: ['Alam, Shadia', 'Andersen, Jeremiah', 'Barner, Ross', 'Bee, Christopher', 'Bixby, Eric', 'Caufield, Brooke', 'Cullen, Steven', 'Haberman, Phillip', 'Hamner, H', 'Johnston, Nathan', 'Leidy, Jennifer', 'Libby, Arlene', 'Lillis, Joseph', 'Long, Daniel', 'McLaughlin, Cristina', 'Murphy, Claire', 'Nerby, Craig', 'Pizzi, Carrie', 'Riley, Meghan', 'Salisbury, Catherine', 'Smith, Michael', 'Stefka, Jakub', 'Vogt, Adam', 'Waldner, Dale', 'Walts, Michael', 'Worcester, Heath']
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+# load libraries
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(gt)
+```
+
+<div align="center"> 
+
+# Cases and Blocks Signed-out by Pathologist: <br>Jan 2019 -- Sep 2020
+
+<br>
+
+```{r import-data, echo=FALSE, message=FALSE}
+#import and clean data for all cases
+# All signed out cases raw data -----
+cases_raw <-
+  list.files(path = here::here("data"),
+             pattern = "^(\\d{4})(-cases)\\.xls",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
+
+# AP cases and blocks raw data -----
+ap_raw <-
+  list.files(path = here::here("data"),
+             pattern = "^(\\d{4})(-\\d.+)\\.xls",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
+
+# Intraoperative consultations raw data -----
+iop_raw20 <-
+  list.files(path = here::here("data"),
+             pattern = "([2020q3])(-iop)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
+
+iop_raw21 <-
+  list.files(path = here::here("data"),
+             pattern = "([2021q1])(-iop)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows()
+
+# Internal consultations raw data -----
+iconsult_raw <-
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-iconsult)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows()
+
+# Bone marrow cases raw data -----
+marrow_raw <-
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-marrow)(\\.xls)",
+             full.names = TRUE) %>%
+  sapply(readxl::read_excel, simplify = FALSE) %>%
+  bind_rows() 
+
+# Flow cytometry cases raw data -----
+flow_raw <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-flow)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect('Pathologist', "-|Total"))
+
+# Peripheral blood reviews raw data -----
+pblood <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-peripheral-blood)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect(Pathologist, "-|Total"))
+
+# Urine FISH cases -----
+ufish <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-urine-fish)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows() %>% 
+  filter(!str_detect(Pathologist, "-|Total"))
+
+# VIAS cases----
+vias <- 
+  list.files(path = here::here("data"),
+             pattern = "(\\d+)(-vias)(\\.xls)",
+             full.names = TRUE) %>% 
+  sapply(readxl::read_excel, simplify = FALSE) %>% 
+  bind_rows()
+
+#Part A 2021-----
+
+partA_2021_raw <-
+  list.files(
+    path = here::here("data"), 
+    pattern = "\\d{4}-\\d{2}-partA",
+    full.names = TRUE
+  ) %>% 
+  sapply(readxl::read_excel, 
+         simplify = FALSE, 
+        )  %>% 
+  dplyr::bind_rows()
+
+# Active CPT-----
+active_cpt <- 
+  readxl::read_excel(
+    here::here('data','active-cpt-codes.xlsx'))
+
+#Total CPT -----
+cpt_raw <- 
+  list.files(
+    path = here::here("data"), 
+    pattern = "(\\d+)(-tat)(\\.xls)",
+    full.names = TRUE
+  ) %>% 
+  sapply(readxl::read_excel, 
+         simplify = FALSE, 
+        )  %>% 
+  dplyr::bind_rows()
+```
+
+```{r clean-data, echo=FALSE, message=FALSE}
+# Clean all cases data -----
+cases_clean <- 
+  cases_raw %>% 
+  pivot_longer(
+    !`Pathologist`, 
+    names_to = "ddate",
+    values_to = "n"
+  ) %>% 
+  mutate(
+    ddate = mdy(ddate),
+    yr = year(ddate),
+    mth = month(ddate, label = TRUE, abbr = TRUE)
+  ) %>% 
+  filter(ddate < "2020-10-01",
+         !Pathologist %in% c("Brooke Caufield, MD", "Joseph Lillis, MD", 
+           "Laurel Stearns, DO")) %>% 
+  group_by(yr, mth, Pathologist) %>% 
+  summarize(
+    Cases = as.numeric(sum(n, na.rm = TRUE))
+  ) %>% 
+  ungroup()
+
+# Clean AP cases and blocks data -----
+ap_clean <- 
+  ap_raw %>% 
+  mutate(
+    `Create Date` = mdy(`Create Date`),
+    yr = year(`Create Date`),
+    mth = month(`Create Date`, label = TRUE, abbr = TRUE)
+  ) %>% 
+  filter(
+    `Create Date` < "2020-10-01",
+    status != "Deleted", 
+  ) %>% 
+  group_by(yr, mth, `Primary Pathologist`) %>% 
+  summarize(
+    Cases = as.numeric(sum(n())),
+    Blocks = as.numeric(sum(Blocks))
+  )  %>% 
+  ungroup()
+
+# Clean Part A cases -----
+
+partA_2021 <- 
+  partA_2021_raw %>% 
+  select(1:3) %>% 
+  na.omit() %>% 
+  mutate(
+    year = year(Date),
+    month = month(Date, label = TRUE, abbr = TRUE)
+  ) %>% 
+  select(-Date) %>% 
+  group_by(year,month, Name) %>% 
+  summarize(
+    Cases = sum(Hours)) %>% 
+  relocate(Name, .before=year) %>% 
+  ungroup()
+
+#Clean Iconsult ----
+
+iconsult_clean <- 
+  iconsult_raw %>% 
+  mutate(
+    `Collected date` = mdy(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
+#Clean IOP -----
+
+iop_raw20 <- 
+  iop_raw20 %>% 
+  mutate(
+    `Collected date` = ymd(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
+iop_raw21 <- 
+  iop_raw21 %>% 
+  mutate(
+    `Collected date` = mdy(`Collected date`),
+    yr = year(`Collected date`),
+    mth = month(`Collected date`, label = TRUE, abbr = TRUE)
+  )
+
+iop_clean <- 
+  full_join(iop_raw20, iop_raw21) 
+
+#Clean CPT -----
+cpt_clean <- 
+  cpt_raw %>% 
+  select(PATHOLOGIST, 'RESULT ID', Create, CPTS) %>% 
+  separate_rows(CPTS, convert = TRUE) %>% 
+   mutate(
+    Create = mdy_hm(Create),
+    yr = year(Create),
+    mth = month(Create, label = TRUE, abbr = TRUE)
+  ) %>% 
+  select(-Create) %>% 
+  filter(PATHOLOGIST != c('Admin, Summit', NA))
+
+```
+
+```{r standardize names, echo=FALSE}
+#Cases Clean 
+path_names <- cases_clean$Pathologist
+
+fn_ln <- gsub("(.*),.*", "\\1", path_names)
+
+firstname = sapply(strsplit(fn_ln, ' '), function(x) x[1])
+
+lastname = sapply(strsplit(fn_ln, ' '), function(x) x[length(x)])
+
+cases_clean$Pathologist <- paste(lastname, firstname, sep = ', ')
+
+#vias
+
+ln_fn <- tibble(lastname, firstname) %>% 
+            unique()
+  
+vias$`VIAS PATH`= str_to_title(vias$`VIAS PATH`)
+
+vias <- merge(vias, ln_fn, by.x= 'VIAS PATH', by.y = 'lastname') 
+
+vias_fn = vias$firstname
+
+vias_ln = vias$`VIAS PATH`
+
+vias$`VIAS PATH` <- paste(vias_ln, vias_fn, sep = ', ')
+
+vias <- select(vias, -firstname)
+
+
+#Iconsult 
+
+iconsult_pathnames <- iconsult_clean$`Consulting Pathologist`
+
+iconsult_fnln <- gsub("(.*),.*", "\\1", iconsult_pathnames)
+
+iconsult_firstname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[1])
+
+iconsult_lastname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[length(x)])
+
+iconsult_clean$`Consulting Pathologist` <- 
+  paste(iconsult_lastname, iconsult_firstname, sep = ', ')
+
+#Flow Raw
+fr_pathnames <- flow_raw$Pathologist
+
+fr_fnln <- gsub("(.*),.*", "\\1", fr_pathnames)
+
+fr_firstname = sapply(strsplit(fr_fnln, ' '), function(x) x[1])
+
+fr_lastname = sapply(strsplit(fr_fnln, ' '), function(x) x[length(x)])
+
+flow_raw$Pathologist <- paste(fr_lastname, fr_firstname, sep = ', ')
+
+
+#Pblood 
+pb_pathnames <- pblood$Pathologist
+
+pb_fnln <- gsub("(.*),.*", "\\1", pb_pathnames)
+
+pb_firstname = sapply(strsplit(pb_fnln, ' '), function(x) x[1])
+
+pb_lastname = sapply(strsplit(pb_fnln, ' '), function(x) x[length(x)])
+
+pblood$Pathologist <- paste(pb_lastname, pb_firstname, sep = ', ')
+
+#Ufish
+
+uf_pathnames <- ufish$Pathologist
+
+uf_fnln <- gsub("(.*),.*", "\\1", uf_pathnames)
+
+uf_firstname = sapply(strsplit(uf_fnln, ' '), function(x) x[1])
+
+uf_lastname = sapply(strsplit(uf_fnln, ' '), function(x) x[length(x)])
+
+ufish$Pathologist <- paste(uf_lastname, uf_firstname, sep = ', ')
+
+#Part A names
+
+partA_pathnames <- partA_2021$Name
+
+pA_fn_ln <- gsub("(.*),.*", "\\1", partA_pathnames)
+
+pA_firstname = sapply(strsplit(pA_fn_ln, ' '), function(x) x[1])
+
+pA_lastname = sapply(strsplit(pA_fn_ln, ' '), function(x) x[length(x)])
+
+partA_2021$Name <- paste(pA_lastname, pA_firstname, sep = ', ')
+
+partA_2021$Name[partA_2021$Name == "Bee, Chris"] <- "Bee, Christopher"
+
+partA_2021$Name[partA_2021$Name == "Hamner, Wentzell"] <- "Hamner, H"
+
+partA_2021$Name[partA_2021$Name == "Salisbury, Cathy"] <- "Salisbury, Catherine"
+
+partA_2021$Name[partA_2021$Name == "Walts, Mike"] <- "Walts, Michael"
+```
+
+```{r anonymize names, echo=FALSE}
+library(stringi)
+
+all_pathnames <- merge(cpt_clean, ap_clean, by.x = 'PATHOLOGIST', by.y = 'Primary Pathologist', all = TRUE)
+
+path_namekey <- all_pathnames %>% 
+  select(`PATHOLOGIST`) %>% 
+  unique()%>%
+  rename(Pathologist = PATHOLOGIST) %>% 
+  mutate(Path_num = stri_rand_strings(26,4, pattern = "[0-9]"))
+
+#Cases Clean 
+cases_clean <- merge(
+              cases_clean, path_namekey, 
+              by= 'Pathologist')
+#flow raw
+flow_raw <- merge(
+            flow_raw, path_namekey, 
+            by= 'Pathologist')
+
+#Pblood
+pblood <- merge(
+          pblood, path_namekey, 
+          by= 'Pathologist')
+#ufish
+ufish <- merge(
+          ufish, path_namekey, 
+          by= 'Pathologist')
+#ap clean
+ap_clean<- merge(
+            ap_clean,path_namekey, 
+            by.x = "Primary Pathologist", by.y = "Pathologist", 
+            all.x = TRUE)
+#i consult
+iconsult_raw <- merge(
+                iconsult_raw, path_namekey, 
+                by.x = "Consulting Pathologist", by.y = "Pathologist", 
+                all.x = TRUE)
+#iop 
+iop_clean <- merge(
+            iop_clean, path_namekey, 
+            by.x = "IntraOp Path", by.y = "Pathologist", 
+            all.x = TRUE)
+#marrow 
+marrow_raw <- merge(
+              marrow_raw, path_namekey, 
+              by.x = "PATHOLOGIST", by.y = "Pathologist", 
+              all.x = TRUE)
+#VIAS
+vias <- merge(
+        vias, path_namekey, 
+        by.x = "VIAS PATH", by.y = "Pathologist", 
+        all.x = TRUE)
+#Part A
+partA_2021 <- merge(
+              partA_2021, path_namekey, 
+              by.x = "Name", by.y = "Pathologist", 
+              all.x = TRUE)
+
+#CPT 
+cpt_clean <- merge(
+              cpt_clean, path_namekey, 
+              by.x = "PATHOLOGIST", by.y = "Pathologist", 
+              all.x = TRUE)
+
+```
+
+```{r pivot-data, echo=FALSE, message=FALSE}
+# Pivot data to wide format for tabulation
+cases_wide <-  
+  cases_clean %>% 
+  filter(Cases > 0) %>% 
+  pivot_wider(
+    names_from = mth,
+    values_from = Cases
+  ) %>% 
+  rowwise() %>% 
+  mutate(
+    Total = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+  )
+
+ap_cases <- 
+  ap_clean %>% 
+  select(-Blocks) %>% 
+  pivot_wider(names_from = mth, values_from = Cases) %>% 
+  rowwise() %>% 
+  mutate(
+    Total = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+  )
+
+ap_blocks <- 
+  ap_clean %>% 
+  select(-Cases) %>% 
+  pivot_wider(names_from = mth, values_from = Blocks) %>% 
+  rowwise() %>% 
+  mutate(
+    Total = sum(
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+  )
+
+partA_cases <- 
+  partA_2021 %>% 
+  pivot_wider(names_from = month, values_from = Cases) %>% 
+  rowwise() %>% 
+  mutate(
+    Total = sum(
+      Jan, Feb, Mar, na.rm = TRUE)
+    ) 
+```
+
+```{r summary-fns, echo=FALSE, message=FALSE}
+# define summary row functions
+fns_labels <- 
+  list(
+    Median = ~median(., na.rm = TRUE),
+    `Total` = ~sum(., na.rm = TRUE)
+  )
+```
+
+```{r marrow CPT, echo=FALSE, message=FALSE}
+# clean marrow and isolate cpt 
+
+marrow_clean <- 
+  marrow_raw %>% 
+  select(c(PATHOLOGIST,`RESULT ID`, CPTS, Path_num)) %>% 
+  group_by(PATHOLOGIST) %>% 
+  separate_rows(CPTS, convert = TRUE) 
+
+marrow_cpt <- 
+  marrow_clean %>% 
+  count(CPTS, PATHOLOGIST, Path_num) %>% 
+  merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
+  relocate(CPTS, .before = n) %>%
+  mutate(total = n * rvu) %>% 
+  rename(cpt_count = n )
+
+```
+
+```{r total CPT, echo=FALSE, message=FALSE}
+
+cpt_total <- 
+  cpt_clean %>% 
+  count(CPTS, PATHOLOGIST, Path_num) %>% 
+  merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
+  relocate(CPTS, .before = n) %>%
+  mutate(total = n * rvu) %>% 
+  rename(cpt_count = n )
+  
+```
+
+## All Cases
+
+```{r all-cases, echo=FALSE, message=FALSE}
+# 2019 Monthly case counts by pathologist
+cases_wide %>% 
+  filter(yr == params$year_choice)%>% 
+  select(-yr) %>% 
+  filter(Pathologist == params$pathologist_choice) %>% 
+  rename(rowname = Pathologist) %>% 
+  arrange(desc(Total)) %>% 
+  gt(groupname_col = "yr") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = 
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(Total),
+        rows = Total >= median(Total))
+    ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = median(Total) > Total)
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## Part A Q1
+
+```{r PartA-2021, echo=FALSE, message=FALSE, error=TRUE}
+
+partA_cases   %>% 
+  select(-year) %>% 
+  rename(rowname = 'Name') %>% 
+  arrange(desc(Total)) %>% 
+  gt(groupname_col = "year") %>% 
+  fmt_missing(everything()) %>% 
+  summary_rows(
+    groups = NULL,
+    columns = 
+      vars(Jan, Feb, Mar, Total),
+    fns = fns_labels, 
+    formatter = fmt_number,
+    decimals= 0
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = "lightgreen"),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = Total >= median(Total))
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "indianred3"),
+      cell_text(color = "white")
+      ),
+    locations = cells_body(
+      columns = vars(Total),
+      rows = median(Total) > Total)
+  ) %>% 
+  tab_options(
+    column_labels.font.weight = "bold",
+    table.font.size = px(11), 
+    table.width = pct(85)
+  )
+```

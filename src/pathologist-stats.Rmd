@@ -285,7 +285,7 @@ vias <- select(vias, -firstname)
 
 #Iconsult 
 
-iconsult_pathnames <- iconsult_raw$`Consulting Pathologist`
+iconsult_pathnames <- iconsult_clean$`Consulting Pathologist`
 
 iconsult_fnln <- gsub("(.*),.*", "\\1", iconsult_pathnames)
 
@@ -293,7 +293,7 @@ iconsult_firstname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[1])
 
 iconsult_lastname = sapply(strsplit(iconsult_fnln, ' '), function(x) x[length(x)])
 
-iconsult_raw$`Consulting Pathologist` <- 
+iconsult_clean$`Consulting Pathologist` <- 
   paste(iconsult_lastname, iconsult_firstname, sep = ', ')
 
 #Flow Raw
@@ -355,11 +355,13 @@ partA_2021$Name[partA_2021$Name == "Walts, Mike"] <- "Walts, Michael"
 ```{r anonymize names, echo=FALSE}
 library(stringi)
 
-path_namekey <- cpt_clean %>% 
+all_pathnames <- merge(cpt_clean, ap_clean, by.x = 'PATHOLOGIST', by.y = 'Primary Pathologist', all = TRUE)
+
+path_namekey <- all_pathnames %>% 
   select(`PATHOLOGIST`) %>% 
-  unique() %>%
+  unique()%>%
   rename(Pathologist = PATHOLOGIST) %>% 
-  mutate(Path_num = stri_rand_strings(24,4, pattern = "[0-9]"))
+  mutate(Path_num = stri_rand_strings(26,4, pattern = "[0-9]"))
 
 #Cases Clean 
 cases_clean <- merge(
@@ -506,7 +508,7 @@ cpt_total <-
 ```{r 2019-cases, echo=FALSE, message=FALSE}
 # 2019 Monthly case counts by pathologist
 cases_wide %>% 
-  filter(yr == 2019) %>% 
+  filter(yr == 2019)%>% 
   select(-yr) %>% 
   rename(rowname = Pathologist) %>% 
   arrange(desc(Total)) %>% 
@@ -815,7 +817,7 @@ ap_blocks %>%
 
 ```{r intra-op 20, echo=FALSE, message=FALSE}
 iop_clean %>% 
-  filter(yr =='2020') %>% 
+  filter(yr == 2020) %>% 
   select(`IntraOp Path`, `IntraOp Type`) %>% 
   group_by(`IntraOp Type`, `IntraOp Path`) %>% 
   summarize(n = n()) %>% 
