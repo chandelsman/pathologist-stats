@@ -5,19 +5,24 @@ output:
 editor_options: 
   chunk_output_type: console
 params:
-  year_choice:
-    label: "Year"
+  st_date:
+    label: "Starting Date"
+    value: 2019
+    input: select
+    choices: ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
+  end_date:
+    label: "Ending Date"
     value: 2021
-    input: slider
-    min: 2019
-    max: 2030
-    step: 1
+    input: select
+    choices: ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
   pathologist_choice:
     label: 'Pathologist' 
     value: 'Alam, Shadia'
     input: select 
     choices: ['Alam, Shadia', 'Andersen, Jeremiah', 'Barner, Ross', 'Bee, Christopher', 'Bixby, Eric', 'Caufield, Brooke', 'Cullen, Steven', 'Haberman, Phillip', 'Hamner, H', 'Johnston, Nathan', 'Leidy, Jennifer', 'Libby, Arlene', 'Lillis, Joseph', 'Long, Daniel', 'McLaughlin, Cristina', 'Murphy, Claire', 'Nerby, Craig', 'Pizzi, Carrie', 'Riley, Meghan', 'Salisbury, Catherine', 'Smith, Michael', 'Stefka, Jakub', 'Vogt, Adam', 'Waldner, Dale', 'Walts, Michael', 'Worcester, Heath']
 ---
+
+<div align="center"> 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
@@ -29,9 +34,6 @@ library(ggplot2)
 library(gt)
 ```
 
-<div align="center"> 
-
-# Cases and Blocks Signed-out by Pathologist: <br>Jan 2019 -- Sep 2020
 
 <br>
 
@@ -249,10 +251,11 @@ cpt_clean <-
     Create = mdy_hm(Create),
     yr = year(Create),
     mth = month(Create, label = TRUE, abbr = TRUE)
-  ) %>% 
+  )  %>% 
   select(-Create) %>% 
   filter(PATHOLOGIST != c('Admin, Summit', NA))
 
+cpt_clean$PATHOLOGIST[cpt_clean$PATHOLOGIST == '[x] Cullen, Steven'] <- 'Cullen, Steven'
 ```
 
 ```{r standardize names, echo=FALSE}
@@ -363,7 +366,7 @@ path_namekey <- all_pathnames %>%
   select(`PATHOLOGIST`) %>% 
   unique()%>%
   rename(Pathologist = PATHOLOGIST) %>% 
-  mutate(Path_num = stri_rand_strings(26,4, pattern = "[0-9]"))
+  mutate(Path_num = stri_rand_strings(29,4, pattern = "[0-9]"))
 
 #Cases Clean 
 cases_clean <- merge(
@@ -426,6 +429,7 @@ cpt_clean <- merge(
 cases_wide <-  
   cases_clean %>% 
   filter(Cases > 0) %>% 
+  group_by(yr) %>% 
   pivot_wider(
     names_from = mth,
     values_from = Cases
@@ -434,7 +438,8 @@ cases_wide <-
   mutate(
     Total = sum(
       Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
-  )
+  ) %>% 
+  filter(yr>= params$st_date & yr<= params$end_date)
 
 ap_cases <- 
   ap_clean %>% 
@@ -458,12 +463,16 @@ ap_blocks <-
 
 partA_cases <- 
   partA_2021 %>% 
+  group_by(year, Name) %>% 
   pivot_wider(names_from = month, values_from = Cases) %>% 
   rowwise() %>% 
   mutate(
     Total = sum(
-      Jan, Feb, Mar, na.rm = TRUE)
-    ) 
+      Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
+    ) %>% 
+  filter(
+    year>= params$st_date & year<= params$end_date
+  )
 ```
 
 ```{r summary-fns, echo=FALSE, message=FALSE}
@@ -475,49 +484,33 @@ fns_labels <-
   )
 ```
 
-```{r marrow CPT, echo=FALSE, message=FALSE}
-# clean marrow and isolate cpt 
-
-marrow_clean <- 
-  marrow_raw %>% 
-  select(c(PATHOLOGIST,`RESULT ID`, CPTS, Path_num)) %>% 
-  group_by(PATHOLOGIST) %>% 
-  separate_rows(CPTS, convert = TRUE) 
-
-marrow_cpt <- 
-  marrow_clean %>% 
-  count(CPTS, PATHOLOGIST, Path_num) %>% 
-  merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
-  relocate(CPTS, .before = n) %>%
-  mutate(total = n * rvu) %>% 
-  rename(cpt_count = n )
-
-```
 
 ```{r total CPT, echo=FALSE, message=FALSE}
 
 cpt_total <- 
   cpt_clean %>% 
-  count(CPTS, PATHOLOGIST, Path_num) %>% 
+  count(CPTS, PATHOLOGIST, Path_num, yr) %>% 
   merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
   relocate(CPTS, .before = n) %>%
-  mutate(total = n * rvu) %>% 
-  rename(cpt_count = n )
-  
+  mutate(total = n * rvu)%>% 
+  rename(cpt_count = n ) %>% 
+  mutate_if(is.numeric , replace_na, replace = 0) %>% 
+  group_by(PATHOLOGIST) %>% 
+  filter(yr >= params$st_date &
+         yr <= params$end_date)
+
 ```
+
 
 ## All Cases
 
-```{r all-cases, echo=FALSE, message=FALSE}
+```{r all-cases, echo=FALSE, message=FALSE, error=TRUE}
 # 2019 Monthly case counts by pathologist
 cases_wide %>% 
-  filter(yr == params$year_choice)%>% 
-  select(-yr) %>% 
-  filter(Pathologist == params$pathologist_choice) %>% 
-  rename(rowname = Pathologist) %>% 
+  rename(rowname = yr) %>% 
   arrange(desc(Total)) %>% 
   gt(groupname_col = "yr") %>% 
-  fmt_missing(everything()) %>% 
+  fmt_missing(everything())  %>% 
   summary_rows(
     groups = NULL,
     columns = 
@@ -551,20 +544,19 @@ cases_wide %>%
 
 <br>
 
-## Part A Q1
+## Part A
 
-```{r PartA-2021, echo=FALSE, message=FALSE, error=TRUE}
+```{r PartA, echo=FALSE, message=FALSE, error=TRUE}
 
-partA_cases   %>% 
-  select(-year) %>% 
-  rename(rowname = 'Name') %>% 
+partA_cases  %>% 
+  rename(rowname = 'year') %>% 
   arrange(desc(Total)) %>% 
-  gt(groupname_col = "year") %>% 
+  gt(groupname_col = c("Name", "Path_num")) %>% 
   fmt_missing(everything()) %>% 
   summary_rows(
-    groups = NULL,
+    groups = TRUE,
     columns = 
-      vars(Jan, Feb, Mar, Total),
+      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels, 
     formatter = fmt_number,
     decimals= 0
@@ -589,4 +581,31 @@ partA_cases   %>%
     table.font.size = px(11), 
     table.width = pct(85)
   )
+```
+<p style="page-break-before: always;"></p>
+
+<br>
+
+## RVU Pathologist Total
+```{r RVU, echo=FALSE, message=FALSE, error=TRUE}
+cpt_total  %>% 
+  rename(CPT = CPTS, 
+         Count = cpt_count,
+         RVU = rvu, 
+         Total = total
+         ) %>% 
+  gt(
+    rowname_col =  'yr', 
+     groupname_col = c('PATHOLOGIST','Path_num')
+    ) %>% 
+  fmt_missing(everything())%>% 
+  summary_rows(
+    groups = TRUE,
+    columns = 
+      vars(Total),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  )
+
 ```

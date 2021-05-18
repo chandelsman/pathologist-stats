@@ -4,15 +4,7 @@ output:
   html_document
 editor_options: 
   chunk_output_type: console
-params:
-  year_choice:
-    label: "Year"
-    value: 2021
-    input: slider
-    min: 2019
-    max: 2030
-    step: 1
-  
+
 ---
 
 ```{r setup, include=FALSE}
@@ -424,6 +416,7 @@ cpt_clean <- merge(
 cases_wide <-  
   cases_clean %>% 
   filter(Cases > 0) %>% 
+  group_by(yr, Pathologist) %>% 
   pivot_wider(
     names_from = mth,
     values_from = Cases
@@ -433,6 +426,7 @@ cases_wide <-
     Total = sum(
       Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, na.rm = TRUE)
   )
+
 
 ap_cases <- 
   ap_clean %>% 
