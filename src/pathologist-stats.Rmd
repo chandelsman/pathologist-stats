@@ -4,7 +4,6 @@ output:
   html_document
 editor_options: 
   chunk_output_type: console
-
 ---
 
 ```{r setup, include=FALSE}
@@ -230,6 +229,7 @@ iop_raw21 <-
 iop_clean <- 
   full_join(iop_raw20, iop_raw21) 
 
+
 #Clean CPT -----
 cpt_clean <- 
   cpt_raw %>% 
@@ -239,9 +239,11 @@ cpt_clean <-
     Create = mdy_hm(Create),
     yr = year(Create),
     mth = month(Create, label = TRUE, abbr = TRUE)
-  ) %>% 
+  )  %>% 
   select(-Create) %>% 
   filter(PATHOLOGIST != c('Admin, Summit', NA))
+
+cpt_clean$PATHOLOGIST[cpt_clean$PATHOLOGIST == '[x] Cullen, Steven'] <- 'Cullen, Steven'
 
 ```
 
@@ -353,7 +355,7 @@ path_namekey <- all_pathnames %>%
   select(`PATHOLOGIST`) %>% 
   unique()%>%
   rename(Pathologist = PATHOLOGIST) %>% 
-  mutate(Path_num = stri_rand_strings(26,4, pattern = "[0-9]"))
+  mutate(Path_num = stri_rand_strings(30,4, pattern = "[0-9]"))
 
 #Cases Clean 
 cases_clean <- merge(
@@ -488,14 +490,19 @@ marrow_cpt <-
 
 ```{r total CPT, echo=FALSE, message=FALSE}
 
+
 cpt_total <- 
   cpt_clean %>% 
-  count(CPTS, PATHOLOGIST, Path_num) %>% 
+  count(CPTS, PATHOLOGIST, Path_num, yr) %>% 
   merge(active_cpt, by.x = 'CPTS', by.y = 'cpt', all.x = TRUE) %>% 
   relocate(CPTS, .before = n) %>%
-  mutate(total = n * rvu) %>% 
-  rename(cpt_count = n )
-  
+  mutate(total = n * rvu)%>% 
+  rename(cpt_count = n ) %>% 
+  mutate_if(is.numeric , replace_na, replace = 0) %>% 
+  group_by(PATHOLOGIST) %>% 
+  filter(yr >= params$st_date &
+         yr <= params$end_date)
+
 ```
 ## 2019 All Cases
 
@@ -511,7 +518,7 @@ cases_wide %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -519,7 +526,7 @@ cases_wide %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
         rows = Total >= median(Total))
     ) %>%
   tab_style(
@@ -528,13 +535,16 @@ cases_wide %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 
@@ -556,7 +566,7 @@ cases_wide %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -564,7 +574,7 @@ cases_wide %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -573,13 +583,16 @@ cases_wide %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 <p style="page-break-before: always;"></p>
@@ -589,8 +602,7 @@ cases_wide %>%
 ## 2021 Part A Q1
 
 ```{r PartA-2021, echo=FALSE, message=FALSE}
-partA_cases %>% 
-  select(-year) %>% 
+partA_cases%>% 
   rename(rowname = 'Name') %>% 
   arrange(desc(Total)) %>% 
   gt(groupname_col = "year") %>% 
@@ -598,7 +610,7 @@ partA_cases %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels, 
     formatter = fmt_number,
     decimals= 0
@@ -606,7 +618,7 @@ partA_cases %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -615,13 +627,16 @@ partA_cases %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 <p style="page-break-before: always;"></p>
@@ -642,7 +657,7 @@ ap_cases %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -650,7 +665,7 @@ ap_cases %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -659,13 +674,16 @@ ap_cases %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 
@@ -686,7 +704,7 @@ ap_cases %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -694,7 +712,7 @@ ap_cases %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -703,13 +721,16 @@ ap_cases %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 
@@ -731,7 +752,7 @@ ap_blocks %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -739,7 +760,7 @@ ap_blocks %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -748,13 +769,16 @@ ap_blocks %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 
@@ -776,7 +800,7 @@ ap_blocks %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -784,7 +808,7 @@ ap_blocks %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -793,13 +817,16 @@ ap_blocks %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 
@@ -829,7 +856,7 @@ iop_clean %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
+    columns = c(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -897,7 +924,7 @@ iop_clean %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -906,7 +933,7 @@ iop_clean %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total < median(Total, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1457,4 +1484,30 @@ pblood %>%
     table.width = pct(55)
   )
 ```
+<p style="page-break-before: always;"></p>
 
+<br>
+
+## RVU Pathologist Total
+```{r RVU, echo=FALSE, message=FALSE, error=TRUE}
+cpt_total  %>% 
+  rename(CPT = CPTS, 
+         Count = cpt_count,
+         RVU = rvu, 
+         Total = total
+         ) %>% 
+  gt(
+    rowname_col =  'yr', 
+     groupname_col = c('PATHOLOGIST','Path_num')
+    ) %>% 
+  fmt_missing(everything())%>% 
+  summary_rows(
+    groups = TRUE,
+    columns = 
+      c(Total),
+    fns = fns_labels,
+    formatter = fmt_number,
+    decimals = 0
+  ) 
+
+```

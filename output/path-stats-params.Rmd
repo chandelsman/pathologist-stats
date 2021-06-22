@@ -15,11 +15,7 @@ params:
     value: 2021
     input: select
     choices: ['2019', '2020', '2021', '2022', '2023', '2024', '2025']
-  pathologist_choice:
-    label: 'Pathologist' 
-    value: 'Alam, Shadia'
-    input: select 
-    choices: ['Alam, Shadia', 'Andersen, Jeremiah', 'Barner, Ross', 'Bee, Christopher', 'Bixby, Eric', 'Caufield, Brooke', 'Cullen, Steven', 'Haberman, Phillip', 'Hamner, H', 'Johnston, Nathan', 'Leidy, Jennifer', 'Libby, Arlene', 'Lillis, Joseph', 'Long, Daniel', 'McLaughlin, Cristina', 'Murphy, Claire', 'Nerby, Craig', 'Pizzi, Carrie', 'Riley, Meghan', 'Salisbury, Catherine', 'Smith, Michael', 'Stefka, Jakub', 'Vogt, Adam', 'Waldner, Dale', 'Walts, Michael', 'Worcester, Heath']
+
 ---
 
 <div align="center"> 
@@ -221,17 +217,18 @@ iconsult_clean <-
     mth = month(`Collected date`, label = TRUE, abbr = TRUE)
   )
 
+
 #Clean IOP -----
 
-iop_raw20 <- 
+iop_clean20 <- 
   iop_raw20 %>% 
   mutate(
-    `Collected date` = ymd(`Collected date`),
+    `Collected date` = mdy(`Collected date`),
     yr = year(`Collected date`),
     mth = month(`Collected date`, label = TRUE, abbr = TRUE)
   )
 
-iop_raw21 <- 
+iop_clean21 <- 
   iop_raw21 %>% 
   mutate(
     `Collected date` = mdy(`Collected date`),
@@ -240,7 +237,7 @@ iop_raw21 <-
   )
 
 iop_clean <- 
-  full_join(iop_raw20, iop_raw21) 
+  full_join(iop_clean20, iop_clean21) 
 
 #Clean CPT -----
 cpt_clean <- 
@@ -366,7 +363,7 @@ path_namekey <- all_pathnames %>%
   select(`PATHOLOGIST`) %>% 
   unique()%>%
   rename(Pathologist = PATHOLOGIST) %>% 
-  mutate(Path_num = stri_rand_strings(29,4, pattern = "[0-9]"))
+  mutate(Path_num = stri_rand_strings(30,4, pattern = "[0-9]"))
 
 #Cases Clean 
 cases_clean <- merge(
@@ -514,7 +511,7 @@ cases_wide %>%
   summary_rows(
     groups = NULL,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -522,7 +519,7 @@ cases_wide %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
         rows = Total >= median(Total))
     ) %>%
   tab_style(
@@ -531,7 +528,7 @@ cases_wide %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -556,7 +553,7 @@ partA_cases  %>%
   summary_rows(
     groups = TRUE,
     columns = 
-      vars(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
+      c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total),
     fns = fns_labels, 
     formatter = fmt_number,
     decimals= 0
@@ -564,7 +561,7 @@ partA_cases  %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total))
   ) %>%
   tab_style(
@@ -573,7 +570,7 @@ partA_cases  %>%
       cell_text(color = "white")
       ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = median(Total) > Total)
   ) %>% 
   tab_options(
@@ -602,7 +599,7 @@ cpt_total  %>%
   summary_rows(
     groups = TRUE,
     columns = 
-      vars(Total),
+      c(Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
