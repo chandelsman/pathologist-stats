@@ -502,7 +502,7 @@ cpt_total <-
 ## All Cases
 
 ```{r all-cases, echo=FALSE, message=FALSE, error=TRUE}
-# 2019 Monthly case counts by pathologist
+# Monthly case counts by pathologist
 cases_wide %>% 
   rename(rowname = yr) %>% 
   arrange(desc(Total)) %>% 
@@ -535,6 +535,9 @@ cases_wide %>%
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Pathologist, Path_num, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 <p style="page-break-before: always;"></p>
@@ -577,6 +580,9 @@ partA_cases  %>%
     column_labels.font.weight = "bold",
     table.font.size = px(11), 
     table.width = pct(85)
+  )%>% 
+  cols_move_to_start(
+    columns = c(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec, Total)
   )
 ```
 <p style="page-break-before: always;"></p>
@@ -603,6 +609,6 @@ cpt_total  %>%
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
-  )
+  ) 
 
 ```

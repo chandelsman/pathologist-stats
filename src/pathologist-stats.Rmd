@@ -499,9 +499,7 @@ cpt_total <-
   mutate(total = n * rvu)%>% 
   rename(cpt_count = n ) %>% 
   mutate_if(is.numeric , replace_na, replace = 0) %>% 
-  group_by(PATHOLOGIST) %>% 
-  filter(yr >= params$st_date &
-         yr <= params$end_date)
+  group_by(PATHOLOGIST) 
 
 ```
 ## 2019 All Cases
@@ -837,12 +835,11 @@ ap_blocks %>%
 ## 2020 Q3 Intraoperative Consultations Performed
 
 ```{r intra-op 20, echo=FALSE, message=FALSE}
-iop_clean %>% 
-  filter(yr == 2020) %>% 
+iop_clean  %>%
+  filter(is.na(yr)) %>% 
   select(`IntraOp Path`, `IntraOp Type`) %>% 
-  group_by(`IntraOp Type`, `IntraOp Path`) %>% 
-  summarize(n = n()) %>% 
-  ungroup() %>% 
+  group_by(`IntraOp Type`, `IntraOp Path`) %>%   
+  summarize(n = n()) %>%  ungroup() %>%  
   pivot_wider(names_from = `IntraOp Type`, values_from = n) %>% 
   rowwise() %>% 
   mutate(
@@ -970,7 +967,7 @@ iop_clean %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
+    columns = c(`FNA Adequacy`, Frozen, Gross, `Touch Prep`, Total),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1038,7 +1035,7 @@ iop_clean %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total >= median(Total, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1047,7 +1044,7 @@ iop_clean %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(Total),
+      columns = c(Total),
       rows = Total < median(Total, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1086,7 +1083,7 @@ iconsult_clean%>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1094,7 +1091,7 @@ iconsult_clean%>%
 tab_style(
   style = cell_fill(color = "lightgreen"),
   locations = cells_body(
-    columns = vars(n),
+    columns = c(n),
     rows = n >= median(n, na.rm = TRUE))
 ) %>%
   tab_style(
@@ -1103,7 +1100,7 @@ tab_style(
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1142,7 +1139,7 @@ iconsult_clean%>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1150,7 +1147,7 @@ iconsult_clean%>%
 tab_style(
   style = cell_fill(color = "lightgreen"),
   locations = cells_body(
-    columns = vars(n),
+    columns = c(n),
     rows = n >= median(n, na.rm = TRUE))
 ) %>%
   tab_style(
@@ -1159,7 +1156,7 @@ tab_style(
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1206,7 +1203,7 @@ marrow_raw %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1214,7 +1211,7 @@ marrow_raw %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1223,7 +1220,7 @@ marrow_raw %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1270,7 +1267,7 @@ marrow_raw %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1278,7 +1275,7 @@ marrow_raw %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1287,7 +1284,7 @@ marrow_raw %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1318,7 +1315,7 @@ flow_raw %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1326,7 +1323,7 @@ flow_raw %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1335,7 +1332,7 @@ flow_raw %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1365,7 +1362,7 @@ flow_raw %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1373,7 +1370,7 @@ flow_raw %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1382,7 +1379,7 @@ flow_raw %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1411,7 +1408,7 @@ pblood %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1419,7 +1416,7 @@ pblood %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1428,7 +1425,7 @@ pblood %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
@@ -1458,7 +1455,7 @@ pblood %>%
   fmt_missing(everything()) %>% 
   summary_rows(
     groups = NULL,
-    columns = vars(n),
+    columns = c(n),
     fns = fns_labels,
     formatter = fmt_number,
     decimals = 0
@@ -1466,7 +1463,7 @@ pblood %>%
   tab_style(
     style = cell_fill(color = "lightgreen"),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n >= median(n, na.rm = TRUE))
   ) %>%
   tab_style(
@@ -1475,7 +1472,7 @@ pblood %>%
       cell_text(color = "white")
     ),
     locations = cells_body(
-      columns = vars(n),
+      columns = c(n),
       rows = n < median(n, na.rm = TRUE))
   ) %>% 
   tab_options(
